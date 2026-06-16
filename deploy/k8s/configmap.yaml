@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-platform-config
+  namespace: llm-platform
+  labels:
+    app: llm-platform
+data:
+  LOG_LEVEL: "INFO"
+  LOG_JSON: "true"
+  CORS_ORIGINS: "*"
+  OTEL_SERVICE_NAME: "llm-platform"
+  DB_POOL_SIZE: "20"
+  DB_MAX_OVERFLOW: "10"
+  REDIS_POOL_SIZE: "50"
+  AUDIT_LOG_DIR: "/var/log/llm-platform/audit"
+  ALERT_WEBHOOK_URL: ""
+  RATE_LIMIT_DEFAULT_RPM: "100"
+  RATE_LIMIT_DEFAULT_TPM: "100000"
+  CIRCUIT_BREAKER_TIMEOUT_SECONDS: "30"
+  CIRCUIT_BREAKER_FAILURE_THRESHOLD: "5"
+  RAG_DEFAULT_TOP_K: "10"
+  RAG_CACHE_TTL_SECONDS: "3600"
+  AGENT_MAX_STEPS_DEFAULT: "15"
+  AGENT_LOOP_DETECTION_THRESHOLD: "3"
+  MAX_FILE_UPLOAD_SIZE_MB: "50"
+  PROMPT_MAX_VERSIONS: "100"
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"

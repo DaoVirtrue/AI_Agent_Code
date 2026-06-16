@@ -1,0 +1,419 @@
+# ─── LLM Platform: Default Configuration ──────────────────────
+# All values can be overridden via environment variables.
+# Environment variables use prefix LLM_ and are uppercase with __ as separator.
+# Example: database.url -> DATABASE_URL
+
+# ─── Application ──────────────────────────────────────────────
+app:
+  name: "LLM Platform"
+  version: "0.1.0"
+  environment: "development"  # development | staging | production
+  debug: false
+  secret_key: "${JWT_SECRET_KEY}"
+  jwt_algorithm: "HS256"
+  jwt_expire_minutes: 1440
+  max_request_size_mb: 100
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://localhost:8000"
+  cors_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "PATCH"
+    - "OPTIONS"
+  cors_headers:
+    - "*"
+  graceful_shutdown_timeout: 30
+
+# ─── Database ─────────────────────────────────────────────────
+database:
+  url: "postgresql+asyncpg://llm_platform:llm_platform_secret@localhost:5432/llm_platform"
+  url_sync: "postgresql://llm_platform:llm_platform_secret@localhost:5432/llm_platform"
+  pool_size: 20
+  max_overflow: 40
+  pool_timeout: 30
+  pool_recycle: 3600
+  pool_pre_ping: true
+  echo_sql: false
+  connect_timeout: 10
+  command_timeout: 60
+  ssl_mode: "prefer"
+
+# ─── Redis ────────────────────────────────────────────────────
+redis:
+  url: "redis://:redis_secret@localhost:6379/0"
+  max_connections: 50
+  socket_timeout: 5
+  socket_connect_timeout: 5
+  retry_on_timeout: true
+  decode_responses: true
+  health_check_interval: 30
+  key_prefix: "llm:"
+
+# ─── RabbitMQ ─────────────────────────────────────────────────
+rabbitmq:
+  url: "amqp://llm_platform:rabbitmq_secret@localhost:5672/%2F"
+  prefetch_count: 10
+  heartbeat: 60
+  connection_timeout: 30
+  exchange_name: "llm-platform"
+  default_queue_ttl: 86400000  # 24 hours in ms
+
+# ─── Milvus ───────────────────────────────────────────────────
+milvus:
+  host: "localhost"
+  port: 19530
+  grpc_port: 9091
+  user: ""
+  password: ""
+  secure: false
+  db_name: "default"
+  connection_timeout: 30
+  max_retries: 3
+
+# ─── MinIO (Object Storage) ──────────────────────────────────
+minio:
+  endpoint: "localhost:9000"
+  access_key: "minioadmin"
+  secret_key: "minioadmin_secret"
+  secure: false
+  bucket_documents: "llm-documents"
+  bucket_artifacts: "llm-artifacts"
+  bucket_models: "llm-models"
+  presigned_url_expiry: 3600
+
+# ─── Celery ───────────────────────────────────────────────────
+celery:
+  task_serializer: "json"
+  result_serializer: "json"
+  accept_content:
+    - "json"
+  timezone: "UTC"
+  enable_utc: true
+  task_track_started: true
+  task_time_limit: 3600
+  task_soft_time_limit: 3300
+  worker_max_tasks_per_child: 100
+  worker_concurrency: 4
+  result_expires: 86400
+  result_backend: "redis"
+  beat_schedule:
+    cleanup-expired-sessions:
+      task: "src.tasks.cleanup_sessions"
+      schedule: 3600  # every hour
+    sync-usage-metrics:
+      task: "src.tasks.sync_usage_metrics"
+      schedule: 900   # every 15 minutes
+    vacuum-vector-store:
+      task: "src.tasks.vacuum_vector_store"
+      schedule: 43200  # every 12 hours
+    health-check-models:
+      task: "src.tasks.health_check_models"
+      schedule: 300  # every 5 minutes
+
+# ─── Rate Limiting ────────────────────────────────────────────
+rate_limiting:
+  enabled: true
+  backend: "redis"  # redis | memory
+  storage_url: "redis://:redis_secret@localhost:6379/1"
+  tiers:
+    free:
+      requests_per_minute: 20
+      requests_per_hour: 500
+      requests_per_day: 2000
+      tokens_per_minute: 50000
+      tokens_per_day: 1000000
+      concurrent_requests: 2
+      model_access:
+        - "gpt-4o-mini"
+        - "deepseek-chat"
+        - "local-llama-8b"
+    pro:
+      requests_per_minute: 100
+      requests_per_hour: 3000
+      requests_per_day: 50000
+      tokens_per_minute: 200000
+      tokens_per_day: 10000000
+      concurrent_requests: 10
+      model_access:
+        - "gpt-4o"
+        - "gpt-4o-mini"
+        - "claude-sonnet-4"
+        - "deepseek-chat"
+        - "qwen-max"
+        - "local-llama-8b"
+        - "local-qwen-14b"
+    enterprise:
+      requests_per_minute: 1000
+      requests_per_hour: 30000
+      requests_per_day: 500000
+      tokens_per_minute: 1000000
+      tokens_per_day: 100000000
+      concurrent_requests: 100
+      model_access:
+        - "gpt-4o"
+        - "gpt-4o-mini"
+        - "claude-sonnet-4"
+        - "claude-opus-4"
+        - "deepseek-chat"
+        - "qwen-max"
+        - "local-llama-8b"
+        - "local-qwen-14b"
+
+# ─── RAG Settings ─────────────────────────────────────────────
+rag:
+  chunk_size: 1024
+  chunk_overlap: 128
+  chunking_strategy: "recursive"  # recursive | semantic | fixed | markdown
+  separators:
+    - "\n\n"
+    - "\n"
+    - ". "
+    - "! "
+    - "? "
+    - "; "
+    - ", "
+    - " "
+    - ""
+  top_k: 5
+  similarity_threshold: 0.65
+  reranker_enabled: true
+  reranker_model: "BAAI/bge-reranker-v2-m3"
+  reranker_top_n: 3
+  hybrid_search_enabled: true
+  hybrid_search_alpha: 0.5  # balance between dense (1.0) and sparse (0.0)
+  embedding_model: "BAAI/bge-m3"
+  embedding_dimension: 1024
+  embedding_batch_size: 32
+  index_type: "IVF_FLAT"
+  index_params:
+    nlist: 1024
+    nprobe: 32
+  max_document_size_mb: 50
+  supported_formats:
+    - "pdf"
+    - "docx"
+    - "txt"
+    - "md"
+    - "html"
+    - "csv"
+    - "json"
+    - "pptx"
+    - "xlsx"
+  metadata_extraction:
+    enabled: true
+    extract_title: true
+    extract_author: true
+    extract_date: true
+    extract_keywords: true
+    max_keywords: 10
+
+# ─── Agent Settings ───────────────────────────────────────────
+agent:
+  max_steps: 25
+  max_iterations: 50
+  loop_threshold: 8
+  recursion_limit: 30
+  max_context_tokens: 128000
+  max_memory_tokens: 64000
+  max_summarization_tokens: 2048
+  default_model: "gpt-4o"
+  enable_tool_sandbox: true
+  tool_timeout_seconds: 60
+  max_concurrent_tool_calls: 5
+  checkpoint_interval_seconds: 300
+  max_conversation_turns: 100
+  save_conversation_history: true
+  conversation_history_limit: 50
+  prompt_cache_enabled: true
+  prompt_cache_ttl: 3600
+  tracing_enabled: true
+  tracing_sample_rate: 0.1
+  allowed_tools:
+    - "search_web"
+    - "search_knowledge_base"
+    - "query_database"
+    - "execute_code"
+    - "send_email"
+    - "create_document"
+    - "schedule_task"
+    - "call_api"
+  sandboxed_tools:
+    - "execute_code"
+    - "call_api"
+
+# ─── Cache Settings ───────────────────────────────────────────
+cache:
+  default_backend: "redis"
+  backends:
+    redis:
+      url: "redis://:redis_secret@localhost:6379/2"
+      serializer: "json"
+      compression: "zlib"
+    memory:
+      max_size: 1000
+      eviction_policy: "lru"
+  levels:
+    l1:  # L1 cache — in-process memory (fastest, smallest)
+      backend: "memory"
+      ttl_seconds: 60
+      max_entries: 200
+    l2:  # L2 cache — Redis (medium speed, medium size)
+      backend: "redis"
+      ttl_seconds: 300
+    l3:  # L3 cache — Redis persistent (slowest, largest)
+      backend: "redis"
+      ttl_seconds: 3600
+  entity_ttls:
+    model_response: 600
+    embedding_cache: 86400
+    session_cache: 1800
+    user_profile_cache: 3600
+    rate_limit_bucket: 60
+    token_count_cache: 300
+    search_result_cache: 900
+    document_metadata_cache: 7200
+
+# ─── Monitoring ───────────────────────────────────────────────
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  metrics_path: "/metrics"
+  health_check_path: "/health"
+  readiness_check_path: "/ready"
+  liveness_check_path: "/live"
+  prometheus:
+    enabled: true
+    histogram_buckets:
+      - 0.005
+      - 0.01
+      - 0.025
+      - 0.05
+      - 0.1
+      - 0.25
+      - 0.5
+      - 1.0
+      - 2.5
+      - 5.0
+      - 10.0
+  opentelemetry:
+    enabled: true
+    exporter: "otlp"  # otlp | console | none
+    sampler: "parentbased_traceidratio"
+    sample_rate: 0.1
+    batching_enabled: true
+    max_export_batch_size: 512
+    scheduled_delay_millis: 5000
+    max_queue_size: 2048
+    export_timeout_millis: 30000
+    resource_attributes:
+      service_name: "llm-platform"
+      deployment_environment: "${LLM_PLATFORM_ENV:-development}"
+  logging:
+    level: "INFO"
+    format: "json"  # json | console
+    structlog_enabled: true
+    processors:
+      - "structlog.stdlib.add_log_level"
+      - "structlog.stdlib.add_logger_name"
+      - "structlog.processors.TimeStamper(fmt='iso')"
+      - "structlog.processors.StackInfoRenderer()"
+      - "structlog.processors.format_exc_info"
+      - "structlog.processors.UnicodeDecoder()"
+      - "structlog.dev.ConsoleRenderer()"
+    sensitive_fields:
+      - "password"
+      - "api_key"
+      - "secret"
+      - "token"
+      - "authorization"
+  alerts:
+    error_rate_threshold: 0.05  # 5% error rate
+    latency_p99_threshold_ms: 5000
+    token_usage_spike_threshold: 2.0  # 2x normal rate
+    model_timeout_threshold: 30  # seconds
+    notification_channels:
+      - type: "slack"
+        webhook_url: "${SLACK_WEBHOOK_URL:-}"
+        min_severity: "warning"
+      - type: "email"
+        recipients:
+          - "platform-alerts@example.com"
+        min_severity: "critical"
+
+# ─── Model Registry ───────────────────────────────────────────
+# Detailed model definitions are in config/models.yaml
+model_registry:
+  config_path: "config/models.yaml"
+  default_model: "gpt-4o"
+  fallback_chain:
+    - "gpt-4o-mini"
+    - "claude-sonnet-4"
+    - "deepseek-chat"
+  load_balancing:
+    enabled: true
+    strategy: "round_robin"  # round_robin | least_latency | lowest_cost
+  local_models:
+    enabled: false
+    vllm_base_url: "http://localhost:8001/v1"
+    ollama_base_url: "http://localhost:11434"
+    huggingface_cache_dir: "/app/cache/huggingface"
+  provider_configs:
+    openai:
+      api_key: "${OPENAI_API_KEY}"
+      base_url: "https://api.openai.com/v1"
+      organization: "${OPENAI_ORG_ID:-}"
+      timeout: 60
+      max_retries: 3
+    anthropic:
+      api_key: "${ANTHROPIC_API_KEY}"
+      base_url: "https://api.anthropic.com"
+      timeout: 120
+      max_retries: 3
+    deepseek:
+      api_key: "${DEEPSEEK_API_KEY}"
+      base_url: "https://api.deepseek.com/v1"
+      timeout: 60
+      max_retries: 3
+    qwen:
+      api_key: "${QWEN_API_KEY}"
+      base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+      timeout: 60
+      max_retries: 3
+
+# ─── Security ─────────────────────────────────────────────────
+security:
+  bcrypt_rounds: 12
+  api_key_header: "X-API-Key"
+  rate_limit_by_ip: true
+  rate_limit_by_api_key: true
+  request_validation: "strict"  # strict | permissive
+  max_payload_size_bytes: 10485760  # 10 MB
+  allowed_hosts:
+    - "localhost"
+    - "127.0.0.1"
+  csrf_protection: true
+  cors_credentials: true
+  content_security_policy:
+    default_src: ["'self'"]
+    script_src: ["'self'"]
+    style_src: ["'self'", "'unsafe-inline'"]
+  ip_blacklist: []
+  ip_whitelist: []
+
+# ─── Feature Flags ────────────────────────────────────────────
+feature_flags:
+  rag_enabled: true
+  multi_agent_debate: false
+  streaming_responses: true
+  function_calling: true
+  prompt_caching: true
+  pay_as_you_go_billing: false
+  advanced_analytics: false
+  sso_integration: false
+  audit_logging: true
+  dark_mode: true
+  beta_features: false

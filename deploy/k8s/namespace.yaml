@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm-platform
+  labels:
+    name: llm-platform
+    environment: production
+    team: ai-platform
+  annotations:
+    description: "LLM Platform - Multi-tenant LLM Gateway with RAG, Agents, and Prompt Management"

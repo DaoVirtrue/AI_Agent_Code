@@ -1,0 +1,255 @@
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "llm-platform"
+version = "0.1.0"
+description = "Enterprise LLM Application Platform"
+authors = ["LLM Platform Team <platform@example.com>"]
+readme = "README.md"
+license = "Proprietary"
+packages = [{ include = "src" }]
+requires-python = ">=3.12,<3.13"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.13"
+
+# Web Framework
+fastapi = ">=0.115.0,<0.116.0"
+uvicorn = { extras = ["standard"], version = ">=0.32.0" }
+pydantic = ">=2.10.0"
+pydantic-settings = ">=2.7.0"
+
+# Database
+sqlalchemy = { extras = ["asyncio"], version = ">=2.0.36" }
+asyncpg = ">=0.30.0"
+alembic = ">=1.14.0"
+
+# LLM Frameworks
+langchain = ">=0.3.0"
+langgraph = ">=0.2.0"
+langchain-openai = ">=0.3.0"
+langchain-anthropic = ">=0.3.0"
+langchain-community = ">=0.3.0"
+
+# Model Providers
+openai = ">=1.60.0"
+anthropic = ">=0.40.0"
+
+# Tokenizers and Embedding Utilities
+tiktoken = ">=0.8.0"
+sentencepiece = ">=0.2.0"
+huggingface-hub = ">=0.26.0"
+
+# Vector Stores
+chromadb = ">=0.5.0"
+pymilvus = ">=2.4.0"
+faiss-cpu = ">=1.9.0"
+
+# Embedding Models
+sentence-transformers = ">=3.3.0"
+FlagEmbedding = ">=1.3.0"
+
+# Document Processing
+unstructured = ">=0.16.0"
+pdfplumber = ">=0.11.0"
+python-docx = ">=1.1.0"
+
+# Prompt Programming
+dspy = ">=2.6.0"
+
+# Task Queue and Cache
+redis = ">=5.0.0"
+celery = ">=5.4.0"
+
+# Observability
+prometheus-client = ">=0.21.0"
+opentelemetry-api = ">=1.28.0"
+opentelemetry-sdk = ">=1.28.0"
+structlog = ">=24.4.0"
+
+# HTTP and Utilities
+httpx = ">=0.28.0"
+tenacity = ">=9.0.0"
+jinja2 = ">=3.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.3.0"
+pytest-asyncio = ">=0.24.0"
+pytest-cov = ">=6.0.0"
+ruff = ">=0.8.0"
+mypy = ">=1.13.0"
+pre-commit = ">=4.0.0"
+httpx-mock = ">=0.12.0"
+faker = ">=33.0.0"
+factory-boy = ">=3.3.0"
+testcontainers = ">=4.9.0"
+coverage = ">=7.6.0"
+
+[tool.poetry.scripts]
+llm-platform = "src.cli:main"
+
+# ─── Ruff Configuration ───────────────────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "E",       # pycodestyle errors
+    "W",       # pycodestyle warnings
+    "F",       # pyflakes
+    "I",       # isort
+    "B",       # flake8-bugbear
+    "C4",      # flake8-comprehensions
+    "SIM",     # flake8-simplify
+    "N",       # pep8-naming
+    "UP",      # pyupgrade
+    "RUF",     # ruff-specific rules
+    "TCH",     # flake8-type-checking-imports
+    "T10",     # flake8-debugger
+    "FA",      # flake8-future-annotations
+    "ARG",     # flake8-unused-arguments
+    "PIE",     # flake8-pie
+    "PL",      # pylint
+    "RSE",     # flake8-raise
+    "RET",     # flake8-return
+    "ERA",     # eradicate
+    "PD",      # pandas-vet
+    "PGH",     # pygrep-hooks
+    "FLY",     # flynt
+    "PERF",    # perflint
+]
+ignore = [
+    "E501",                    # line too long — handled by formatter
+    "PLR0913",                 # too many arguments
+    "PLR0912",                 # too many branches
+    "PLR0911",                 # too many return statements
+    "PLR2004",                 # magic value comparison
+    "B008",                    # do not perform function calls in argument defaults
+    "S101",                    # use of assert
+    "ARG001",                  # unused function argument
+    "ARG002",                  # unused method argument
+]
+unfixable = ["F401", "F841"]  # unused-import, unused-variable
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["PLR2004", "S101", "ARG001"]
+"alembic/**/*.py" = ["INP001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+force-sort-within-sections = true
+combine-as-imports = true
+split-on-trailing-comma = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 80
+
+# ─── MyPy Configuration ───────────────────────────────────────
+[tool.mypy]
+python_version = "3.12"
+strict = true
+strict_optional = true
+disallow_any_unimported = false
+disallow_any_generics = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+follow_imports = "normal"
+ignore_missing_imports = false
+explicit_package_bases = true
+namespace_packages = true
+exclude = [
+    "alembic/versions/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "dspy.*",
+    "langchain.*",
+    "langgraph.*",
+    "langchain_openai.*",
+    "langchain_anthropic.*",
+    "langchain_community.*",
+    "chromadb.*",
+    "pymilvus.*",
+    "sentence_transformers.*",
+    "FlagEmbedding.*",
+    "unstructured.*",
+    "pdfplumber.*",
+    "celery.*",
+    "tiktoken.*",
+    "sentencepiece.*",
+]
+ignore_missing_imports = true
+
+# ─── PyTest Configuration ─────────────────────────────────────
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "--asyncio-mode=auto",
+]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "e2e: marks tests as end-to-end tests",
+]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "^\\s*raise NotImplementedError",
+    "\\.\\.\\.",
+]
+show_missing = true
+skip_covered = false
+
+# ─── Additional Tool Configurations ───────────────────────────
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["src"]
+force_sort_within_sections = true
+
+[tool.poetry-dynamic-versioning]
+enable = false

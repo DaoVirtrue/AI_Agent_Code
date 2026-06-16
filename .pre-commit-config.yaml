@@ -1,0 +1,143 @@
+# ─── LLM Platform: Pre-Commit Hooks ──────────────────────────
+# Install: pre-commit install
+# Run all:  pre-commit run --all-files
+# Update:  pre-commit autoupdate
+
+repos:
+  # ─── General File Checks ─────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        name: Fix end of file newline
+        exclude: \.ipynb$
+      - id: check-yaml
+        name: Validate YAML files
+        args: [--allow-multiple-documents]
+        exclude: ^docker-compose\.yml$
+      - id: check-toml
+        name: Validate TOML files
+      - id: check-json
+        name: Validate JSON files
+        exclude: \.ipynb$
+      - id: check-added-large-files
+        name: Prevent large file commits
+        args: [--maxkb=5000]
+      - id: check-merge-conflict
+        name: Check for merge conflict markers
+      - id: check-case-conflict
+        name: Check for case-insensitive filename conflicts
+      - id: check-symlinks
+        name: Check for broken symlinks
+      - id: check-executables-have-shebangs
+        name: Ensure executable scripts have shebangs
+        exclude: \.py$
+      - id: detect-private-key
+        name: Detect committed private keys
+      - id: mixed-line-ending
+        name: Fix mixed line endings
+        args: [--fix=lf]
+      - id: name-tests-test
+        name: Ensure test files start with test_
+        args: [--pytest-test-first]
+        exclude: ^tests/(conftest|fixtures|factories|helpers|utils)\.py$
+      - id: requirements-txt-fixer
+        name: Sort requirements.txt
+        files: ^requirements.*\.txt$
+      - id: no-commit-to-branch
+        name: Prevent direct commits to main/master
+        args: [--branch, main, --branch, master]
+
+  # ─── Ruff (Linter + Formatter) ─────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        name: Ruff linter
+        args:
+          - check
+          - --select=E,W,F,I,B,C4,SIM,N,UP,RUF,TCH,T10,FA,ARG,PIE,PL,RSE,RET,ERA,PD,PGH,FLY,PERF
+        types_or:
+          - python
+          - pyi
+      - id: ruff-format
+        name: Ruff formatter
+        types_or:
+          - python
+          - pyi
+
+  # ─── MyPy (Type Checker) ──────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        name: MyPy type checker
+        args:
+          - --strict
+          - --ignore-missing-imports
+        additional_dependencies:
+          - pydantic>=2.10.0
+          - pydantic-settings>=2.7.0
+          - sqlalchemy>=2.0.36
+          - types-redis>=4.6.0
+          - types-requests>=2.32.0
+          - types-python-dateutil>=2.9.0
+          - types-PyYAML>=6.0.0
+          - types-python-slugify>=8.0.0
+        files: ^src/.*\.py$
+        exclude: ^alembic/
+        pass_filenames: true
+
+  # ─── Security ───────────────────────────────────────────────
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.0
+    hooks:
+      - id: bandit
+        name: Bandit security linter
+        args:
+          - --config=pyproject.toml
+          - --severity-level=medium
+          - --confidence-level=medium
+        exclude: ^tests/
+        files: ^src/.*\.py$
+
+  # ─── Spell Check ────────────────────────────────────────────
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        name: Codespell
+        args:
+          - --skip=*.ipynb,*.json,*.lock,poetry.lock
+          - --ignore-words=.codespell-ignore
+        exclude: ^config/models\.yaml$
+
+  # ─── YAML Linting (Docker Compose) ─────────────────────────
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: YAML linter
+        args:
+          - --strict
+          - -d
+          - "{extends: relaxed, rules: {line-length: {max: 160}, document-start: disable, truthy: {check-keys: false}}}"
+        files: \.ya?ml$
+        exclude: ^docker-compose\.yml$
+
+  # ─── Environment File Checks ────────────────────────────────
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 3.0.0
+    hooks:
+      - id: shellcheck
+        name: Shell script linter
+        files: \.sh$
+        exclude: ^docker/
+      - id: shfmt
+        name: Shell script formatter
+        args: [-i, "2", -ci]
+        files: \.sh$
+        exclude: ^docker/

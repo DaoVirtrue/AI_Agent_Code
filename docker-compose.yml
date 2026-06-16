@@ -1,0 +1,173 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 15s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+
+x-app-depends-on: &app-depends-on
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
+
+services:
+  # --- PostgreSQL ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: llm-platform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-llm_platform}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-llm_platform_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-llm_platform}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-llm_platform}"]
+      <<: *healthcheck-defaults
+      interval: 10s
+      retries: 8
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+  # --- Redis ---
+  redis:
+    image: redis:7-alpine
+    container_name: llm-platform-redis
+    restart: unless-stopped
+    command: >
+      redis-server --appendonly yes --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-redis_secret}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      <<: *healthcheck-defaults
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+  # --- RabbitMQ ---
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: llm-platform-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-llm_platform}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_secret}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      <<: *healthcheck-defaults
+      interval: 10s
+      retries: 8
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+  # --- Application ---
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-platform-app
+    restart: unless-stopped
+    depends_on:
+      <<: *app-depends-on
+    environment:
+      - LLM_PLATFORM_ENV=${LLM_PLATFORM_ENV:-development}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-llm_platform}:${POSTGRES_PASSWORD:-llm_platform_secret}@postgres:5432/${POSTGRES_DB:-llm_platform}
+      - DATABASE_URL_SYNC=postgresql://${POSTGRES_USER:-llm_platform}:${POSTGRES_PASSWORD:-llm_platform_secret}@postgres:5432/${POSTGRES_DB:-llm_platform}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-llm_platform}:${RABBITMQ_PASSWORD:-rabbitmq_secret}@rabbitmq:5672/%2F
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - ./tests:/app/tests:ro
+      - app_uploads:/app/uploads
+      - app_cache:/app/cache
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+  # --- Celery Worker ---
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-platform-worker
+    restart: unless-stopped
+    depends_on:
+      <<: *app-depends-on
+    environment:
+      - LLM_PLATFORM_ENV=${LLM_PLATFORM_ENV:-development}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-llm_platform}:${POSTGRES_PASSWORD:-llm_platform_secret}@postgres:5432/${POSTGRES_DB:-llm_platform}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-llm_platform}:${RABBITMQ_PASSWORD:-rabbitmq_secret}@rabbitmq:5672/%2F
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+      - app_uploads:/app/uploads
+      - app_cache:/app/cache
+    command: celery -A src.shared.broker:celery_app worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+  # --- Frontend (React SPA) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: llm-platform-frontend
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "3000:80"
+    networks:
+      - llm-platform-net
+    logging: *default-logging
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  app_uploads:
+  app_cache:
+
+networks:
+  llm-platform-net:
+    driver: bridge

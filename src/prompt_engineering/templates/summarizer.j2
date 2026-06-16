@@ -1,0 +1,239 @@
+{#-
+============================================================================
+  Conversation Summarization Template
+  Purpose: Generate structured summaries from multi-turn conversation logs.
+  Usage:   Render with conversation[], summary_type, max_length,
+           preserve_speakers, and include_timestamps variables.
+  Author:  LLM Platform Team
+  Version: 1.0.0
+============================================================================
+-#}
+
+{#- ========================================================================= #}
+{#-                         SUMMARIZATION TASK                               #}
+{#- ========================================================================= #}
+
+You are a conversation summarization engine. Your task is to read the
+provided conversation transcript and produce a structured summary that
+captures the essential content while discarding noise and redundancy.
+
+{#- ========================================================================= #}
+{#-                         SUMMARY TYPE SELECTION                           #}
+{#- ========================================================================= #}
+
+{%- set summary_mode = summary_type | default('detailed') %}
+
+{%- if summary_mode == 'detailed' %}
+SUMMARY TYPE: DETAILED
+Produce a comprehensive summary that preserves the full narrative arc of the
+conversation. Include:
+  - A thematic overview paragraph (2-4 sentences)
+  - Key points section with substantive detail for each major topic
+  - All decisions and their supporting rationale
+  - All action items with assignees (if identifiable) and deadlines
+  - Topics covered, listed with timestamps/segment references
+
+{%- elif summary_mode == 'brief' %}
+SUMMARY TYPE: BRIEF
+Produce a concise summary (no more than {{ max_length | default('300') }} words
+total). Include:
+  - A single-paragraph overview (2 sentences maximum)
+  - Key points as a compact bullet list
+  - Decisions (one-liners)
+  - Action items with assignees only
+  Omit detailed explanations, rationale, and minor topics.
+
+{%- elif summary_mode == 'bullets' %}
+SUMMARY TYPE: BULLET LIST
+Produce a minimal, scan-friendly summary using only bullet points. Include:
+  - Each bullet should be a single self-contained fact, decision, or action
+  - Group bullets under the headings: Key Points, Decisions, Action Items,
+    Topics
+  - Use no prose paragraphs
+  - Keep each bullet under 15 words
+  - Total output must not exceed {{ max_length | default('20') }} bullets
+
+{%- else %}
+SUMMARY TYPE: DETAILED (fallback for unrecognized type)
+Produce a comprehensive summary as described in the "detailed" mode.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                         STRUCTURED OUTPUT FORMAT                         #}
+{#- ========================================================================= #}
+
+{%- if summary_mode != 'bullets' %}
+STRUCTURED SUMMARY FORMAT:
+
+## Summary
+<A concise overview paragraph capturing the conversation's purpose, scope,
+and outcome.>
+
+## Key Points
+- <Key finding or important piece of information>
+- <Key finding or important piece of information>
+{%- if summary_mode == 'detailed' %}
+  (Include 1-2 sentences of context per bullet where helpful)
+{%- endif %}
+
+## Decisions
+- <Decision made, who made it if known, and the date/time if available>
+- <Decision made with brief rationale>
+
+## Action Items
+- <Task description>{% if preserve_speakers %} [Assigned to: <speaker>]{% endif %}
+- <Task description>{% if preserve_speakers %} [Assigned to: <speaker>]{% endif %}
+
+## Topics Discussed
+1. **<Topic name>**{% if include_timestamps %} (approximately
+   <timestamp>){% endif %} — <one-line description>
+2. **<Topic name>**{% if include_timestamps %} (approximately
+   <timestamp>){% endif %} — <one-line description>
+
+{%- else %}
+
+BULLET-LIST SUMMARY FORMAT:
+
+### Key Points
+- <fact>
+- <fact>
+
+### Decisions
+- <decision>
+
+### Action Items
+- <action>{% if preserve_speakers %} [@<speaker>]{% endif %}
+
+### Topics
+- <topic>
+
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                       SPEAKER ATTRIBUTION RULES                          #}
+{#- ========================================================================= #}
+
+{%- if preserve_speakers %}
+SPEAKER ATTRIBUTION: ENABLED
+When citing information, attribute it to the speaker who contributed it using
+their role/name as it appears in the transcript. Use the format:
+  - "According to <role>, ..."
+  - "<Role> proposed that ..."
+  - "<Role> disagreed, arguing that ..."
+If multiple speakers contributed to the same point, list all contributing
+speakers.
+
+{%- else %}
+SPEAKER ATTRIBUTION: DISABLED
+Do NOT attribute any content to specific speakers. Summarize information
+without naming who said what. Use passive voice or neutral constructions
+where helpful.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                        TIMESTAMP HANDLING                                #}
+{#- ========================================================================= #}
+
+{%- if include_timestamps %}
+TIMESTAMP INCLUSION: ENABLED
+Where feasible, include timestamps to ground the summary in the conversation
+timeline. Use timestamps to:
+  - Mark when key decisions were reached
+  - Show the chronological flow of topics
+  - Indicate conversation duration on each topic
+  - Note gaps or shifts in conversation
+
+{%- else %}
+TIMESTAMP INCLUSION: DISABLED
+Do NOT include timestamps in the summary. Focus on content rather than
+chronology.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                      DETAIL PRESERVATION RULES                           #}
+{#- ========================================================================= #}
+
+IMPORTANT DETAIL PRESERVATION:
+The following types of content MUST be preserved in the summary regardless of
+summary type or length constraints:
+
+1. NUMBERS AND METRICS: Any quantitative data, statistics, percentages,
+   dollar amounts, dates, times, or measurements mentioned in the
+   conversation.
+
+2. NAMED ENTITIES: People, organizations, products, locations, and other
+   proper nouns. Preserve exact names and titles.
+
+3. DECISIONS AND DEADLINES: Explicit decisions, agreements, rejections,
+   and time-bound commitments.
+
+4. ACTION ITEMS WITH SPECIFIC ASSIGNEES: Any task explicitly assigned to a
+   person or role.
+
+5. UNIQUE OR SURPRISING INFORMATION: Facts that contradict common knowledge,
+   novel ideas, or unexpected turns in the conversation.
+
+6. QUESTIONS THAT REMAIN UNANSWERED: If the conversation raises a question
+   that is never resolved, preserve it to avoid false closure.
+
+LENGTH CONTROL:
+{%- if max_length %}
+  Target maximum length: {{ max_length }}
+{%- if summary_mode == 'brief' %} words{%- elif summary_mode == 'bullets' %} bullets{%- else %} tokens/words{%- endif %}.
+  If the source material is too rich to fit within this limit, prioritize
+  preserving decisions and action items over background discussion.
+{%- else %}
+  No explicit length limit set. Use judgment: be thorough but not verbose.
+  Avoid repetition across sections.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                      CONVERSATION LENGTH GUIDANCE                        #}
+{#- ========================================================================= #}
+
+{%- set conv_length = conversation | length %}
+{%- if conv_length > 20 %}
+NOTE: This is a long conversation ({{ conv_length }} turns). Focus on
+higher-level themes, decisions, and outcomes rather than turn-by-turn detail.
+Collapse repetitive exchanges into summary statements.
+
+{%- elif conv_length > 8 %}
+This is a medium-length conversation ({{ conv_length }} turns). Balance
+brevity with detail — capture all major topics but omit minor tangents.
+
+{%- elif conv_length <= 3 %}
+This is a very short conversation ({{ conv_length }} turns). Preserve nearly
+all content; even brief exchanges may carry important meaning in short
+contexts.
+
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                         CONFIDENCE & DISCLAIMERS                         #}
+{#- ========================================================================= #}
+
+CONFIDENCE STATEMENT:
+After the summary, if applicable, include a brief note on any sections where
+you have low confidence in your interpretation (e.g., due to unclear speaker
+references, ambiguous language, or rapid topic shifts).
+
+{#- ========================================================================= #}
+{#-                       CONVERSATION TRANSCRIPT                           #}
+{#- ========================================================================= #}
+
+CONVERSATION:
+---
+{%- for msg in conversation %}
+[{{ msg.role | default('unknown') | upper }}]{%- if include_timestamps and msg.timestamp %} ({{ msg.timestamp }}){%- endif %}: {{ msg.content | trim }}
+{%- endfor %}
+---
+
+{#- ========================================================================= #}
+{#-                        FINAL REMINDER                                    #}
+{#- ========================================================================= #}
+
+Produce the summary now following the {{ summary_mode }} format and all
+constraints specified above. Do NOT include meta-commentary about the
+summarization process itself. Start directly with the summary content.
+
+{#- end template #}

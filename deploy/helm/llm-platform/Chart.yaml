@@ -1,0 +1,29 @@
+apiVersion: v2
+name: llm-platform
+description: "LLM Platform - Multi-tenant LLM Gateway with RAG, Agents, and Prompt Management"
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.25.0"
+keywords:
+  - llm
+  - gateway
+  - rag
+  - ai
+  - agents
+  - prompts
+home: https://github.com/example/llm-platform
+sources:
+  - https://github.com/example/llm-platform
+maintainers:
+  - name: LLM Platform Team
+    email: llm-platform@example.com
+dependencies:
+  - name: postgresql
+    version: "15.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

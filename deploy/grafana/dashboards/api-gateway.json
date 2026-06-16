@@ -1,0 +1,228 @@
+{
+  "dashboard": {
+    "uid": "llm-platform-gateway",
+    "title": "LLM Platform - API Gateway",
+    "description": "API Gateway metrics: requests, latency, errors, rate limiting, circuit breakers",
+    "tags": ["llm", "gateway", "api"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (per second)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(gateway_requests_total[1m])) by (provider, model)",
+            "legendFormat": "{{provider}}/{{model}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Error Rate (%)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(gateway_requests_total{status=\"error\"}[5m])) / sum(rate(gateway_requests_total[5m])) * 100",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 20},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Request Latency (P50/P95/P99)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(gateway_latency_seconds_bucket[5m])) by (le, provider))",
+            "legendFormat": "P50 - {{provider}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(gateway_latency_seconds_bucket[5m])) by (le, provider))",
+            "legendFormat": "P95 - {{provider}}"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(gateway_latency_seconds_bucket[5m])) by (le, provider))",
+            "legendFormat": "P99 - {{provider}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Requests by Tenant",
+        "type": "barchart",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(gateway_requests_total[5m])) by (tenant_id))",
+            "legendFormat": "{{tenant_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "custom": {"fillOpacity": 80}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Circuit Breaker States",
+        "type": "statetimeline",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "circuit_breaker_state",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"type": "value", "value": "0", "text": "CLOSED", "color": "green"},
+              {"type": "value", "value": "1", "text": "OPEN", "color": "red"},
+              {"type": "value", "value": "2", "text": "HALF_OPEN", "color": "orange"}
+            ]
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Rate Limit Hits",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "sum(rate(rate_limit_hits_total[5m])) by (tenant_id)",
+            "legendFormat": "{{tenant_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {"drawStyle": "bars", "fillOpacity": 70}
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "TTFT - Time to First Token",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 22},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(ttft_seconds_bucket[5m]))",
+            "legendFormat": "P50 TTFT"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(ttft_seconds_bucket[5m]))",
+            "legendFormat": "P95 TTFT"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Inter-Token Latency",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 22},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(itl_seconds_bucket[5m]))",
+            "legendFormat": "P50 ITL"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(itl_seconds_bucket[5m]))",
+            "legendFormat": "P95 ITL"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "HTTP Status Codes",
+        "type": "piechart",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {}
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Requests In Progress",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "sum(http_requests_in_progress) by (method)",
+            "legendFormat": "{{method}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 100},
+                {"color": "red", "value": 500}
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

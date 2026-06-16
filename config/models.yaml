@@ -1,0 +1,542 @@
+# ─── LLM Platform: Model Registry ────────────────────────────
+# Each model entry defines its capabilities, pricing, and constraints.
+# Pricing is per 1M tokens (input / output).
+
+models:
+  # ─── OpenAI Models ──────────────────────────────────────────
+  gpt-4o:
+    provider: "openai"
+    model_id: "gpt-4o"
+    display_name: "GPT-4o"
+    description: "OpenAI's flagship multimodal model with 128K context window"
+    context_window: 128000
+    max_output_tokens: 16384
+    pricing:
+      input: 2.50
+      output: 10.00
+      cached_input: 1.25
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "vision"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "structured_output"
+    supports_streaming: true
+    supports_caching: true
+    supports_vision: true
+    supports_function_calling: true
+    supports_parallel_tool_calls: true
+    rate_limit:
+      requests_per_minute: 500
+      tokens_per_minute: 150000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"  # primary
+      - "zh"
+      - "ja"
+      - "ko"
+      - "fr"
+      - "de"
+      - "es"
+      - "pt"
+      - "ar"
+      - "ru"
+    knowledge_cutoff: "2024-10"
+    max_images_per_request: 20
+
+  gpt-4o-mini:
+    provider: "openai"
+    model_id: "gpt-4o-mini"
+    display_name: "GPT-4o Mini"
+    description: "Lightweight, cost-effective model for simpler tasks"
+    context_window: 128000
+    max_output_tokens: 16384
+    pricing:
+      input: 0.15
+      output: 0.60
+      cached_input: 0.075
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "vision"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "structured_output"
+    supports_streaming: true
+    supports_caching: true
+    supports_vision: true
+    supports_function_calling: true
+    supports_parallel_tool_calls: true
+    rate_limit:
+      requests_per_minute: 1000
+      tokens_per_minute: 200000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"
+      - "zh"
+      - "ja"
+      - "ko"
+      - "fr"
+      - "de"
+      - "es"
+    knowledge_cutoff: "2024-10"
+    max_images_per_request: 20
+
+  # ─── Anthropic Models ──────────────────────────────────────
+  claude-sonnet-4:
+    provider: "anthropic"
+    model_id: "claude-sonnet-4-20250514"
+    display_name: "Claude Sonnet 4"
+    description: "Anthropic's best balance of intelligence, speed, and cost"
+    context_window: 200000
+    max_output_tokens: 16384
+    pricing:
+      input: 3.00
+      output: 15.00
+      cached_input: 0.30
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "vision"
+      - "extended_thinking"
+      - "long_context_qa"
+    supports_streaming: true
+    supports_caching: true
+    supports_vision: true
+    supports_function_calling: true
+    supports_parallel_tool_calls: true
+    rate_limit:
+      requests_per_minute: 50
+      tokens_per_minute: 40000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"
+      - "zh"
+      - "ja"
+      - "fr"
+      - "de"
+      - "es"
+      - "pt"
+      - "it"
+      - "ko"
+      - "ru"
+      - "ar"
+    knowledge_cutoff: "2025-01"
+    max_images_per_request: 30
+
+  claude-opus-4:
+    provider: "anthropic"
+    model_id: "claude-opus-4-20250514"
+    display_name: "Claude Opus 4"
+    description: "Anthropic's most capable model for complex analysis and tasks"
+    context_window: 200000
+    max_output_tokens: 16384
+    pricing:
+      input: 15.00
+      output: 75.00
+      cached_input: 1.50
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "vision"
+      - "extended_thinking"
+      - "long_context_qa"
+      - "complex_analysis"
+      - "multi_step_reasoning"
+    supports_streaming: true
+    supports_caching: true
+    supports_vision: true
+    supports_function_calling: true
+    supports_parallel_tool_calls: true
+    rate_limit:
+      requests_per_minute: 20
+      tokens_per_minute: 10000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"
+      - "zh"
+      - "ja"
+      - "fr"
+      - "de"
+      - "es"
+      - "pt"
+      - "it"
+      - "ko"
+      - "ru"
+      - "ar"
+    knowledge_cutoff: "2025-01"
+    max_images_per_request: 30
+
+  claude-3-5-haiku:
+    provider: "anthropic"
+    model_id: "claude-3-5-haiku-20241022"
+    display_name: "Claude 3.5 Haiku"
+    description: "Anthropic's fastest model for lightweight tasks"
+    context_window: 200000
+    max_output_tokens: 8192
+    pricing:
+      input: 0.80
+      output: 4.00
+      cached_input: 0.08
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "vision"
+    supports_streaming: true
+    supports_caching: true
+    supports_vision: true
+    supports_function_calling: true
+    supports_parallel_tool_calls: true
+    rate_limit:
+      requests_per_minute: 100
+      tokens_per_minute: 50000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"
+      - "zh"
+      - "ja"
+      - "fr"
+      - "de"
+      - "es"
+    knowledge_cutoff: "2024-07"
+    max_images_per_request: 20
+
+  # ─── DeepSeek Models ───────────────────────────────────────
+  deepseek-chat:
+    provider: "deepseek"
+    model_id: "deepseek-chat"
+    display_name: "DeepSeek Chat (V3)"
+    description: "DeepSeek's Mixture-of-Experts flagship chat model"
+    context_window: 131072
+    max_output_tokens: 32768
+    pricing:
+      input: 0.27
+      output: 1.10
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "long_context_qa"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: true
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 60000
+    default_temperature: 0.7
+    default_top_p: 1.0
+    supported_languages:
+      - "en"
+      - "zh"
+      - "ja"
+      - "ko"
+    knowledge_cutoff: "2024-12"
+    max_images_per_request: 0
+
+  deepseek-reasoner:
+    provider: "deepseek"
+    model_id: "deepseek-reasoner"
+    display_name: "DeepSeek Reasoner (R1)"
+    description: "DeepSeek's reasoning-focused model for complex problem solving"
+    context_window: 65536
+    max_output_tokens: 8192
+    pricing:
+      input: 0.55
+      output: 2.19
+    capabilities:
+      - "chat"
+      - "reasoning"
+      - "code_generation"
+      - "complex_analysis"
+      - "multi_step_reasoning"
+      - "math"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: false
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 30
+      tokens_per_minute: 30000
+    default_temperature: 0.6
+    default_top_p: 0.95
+    supported_languages:
+      - "en"
+      - "zh"
+    knowledge_cutoff: "2024-12"
+    max_images_per_request: 0
+
+  # ─── Qwen Models ───────────────────────────────────────────
+  qwen-max:
+    provider: "qwen"
+    model_id: "qwen-max-latest"
+    display_name: "Qwen Max"
+    description: "Alibaba's most capable large model for complex tasks"
+    context_window: 131072
+    max_output_tokens: 8192
+    pricing:
+      input: 2.80
+      output: 11.20
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "structured_output"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: true
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 60000
+    default_temperature: 0.7
+    default_top_p: 0.8
+    supported_languages:
+      - "zh"  # primary
+      - "en"
+      - "ja"
+      - "ko"
+      - "th"
+      - "vi"
+      - "id"
+    knowledge_cutoff: "2024-09"
+
+  qwen-vl-max:
+    provider: "qwen"
+    model_id: "qwen-vl-max-latest"
+    display_name: "Qwen VL Max"
+    description: "Alibaba's vision-language model for multimodal understanding"
+    context_window: 32768
+    max_output_tokens: 4096
+    pricing:
+      input: 2.80
+      output: 11.20
+    capabilities:
+      - "chat"
+      - "vision"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "ocr"
+      - "document_understanding"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: true
+    supports_function_calling: false
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 30000
+    default_temperature: 0.7
+    default_top_p: 0.8
+    supported_languages:
+      - "zh"
+      - "en"
+    knowledge_cutoff: "2024-09"
+    max_images_per_request: 10
+
+  # ─── Local / Self-Hosted Models ────────────────────────────
+  local-llama-8b:
+    provider: "ollama"
+    model_id: "llama-3.3-8b-instruct"
+    display_name: "Llama 3.3 8B (Local)"
+    description: "Meta's Llama 3.3 8B running locally via Ollama or vLLM"
+    context_window: 131072
+    max_output_tokens: 8192
+    pricing:
+      input: 0.0  # local model, no API cost
+      output: 0.0
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: true
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 200
+      tokens_per_minute: 100000
+    default_temperature: 0.7
+    default_top_p: 0.9
+    supported_languages:
+      - "en"
+      - "de"
+      - "fr"
+      - "it"
+      - "pt"
+      - "hi"
+      - "es"
+      - "th"
+    knowledge_cutoff: "2024-07"
+
+  local-qwen-14b:
+    provider: "vllm"
+    model_id: "Qwen/Qwen3-14B-Instruct"
+    display_name: "Qwen 3 14B (Local)"
+    description: "Alibaba's Qwen 3 14B running locally via vLLM"
+    context_window: 131072
+    max_output_tokens: 8192
+    pricing:
+      input: 0.0  # local model, no API cost
+      output: 0.0
+    capabilities:
+      - "chat"
+      - "function_calling"
+      - "code_generation"
+      - "translation"
+      - "summarization"
+      - "reasoning"
+      - "structured_output"
+    supports_streaming: true
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: true
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 200
+      tokens_per_minute: 100000
+    default_temperature: 0.7
+    default_top_p: 0.8
+    supported_languages:
+      - "zh"
+      - "en"
+      - "ja"
+      - "ko"
+      - "fr"
+      - "de"
+      - "es"
+      - "pt"
+    knowledge_cutoff: "2024-09"
+
+  # ─── Embedding Models ──────────────────────────────────────
+  text-embedding-3-small:
+    provider: "openai"
+    model_id: "text-embedding-3-small"
+    display_name: "Text Embedding 3 Small"
+    description: "OpenAI's efficient embedding model (1536 dimensions)"
+    context_window: 8191
+    max_output_tokens: 0  # embedding model, no text output
+    embedding_dimension: 1536
+    pricing:
+      input: 0.02
+      output: 0.0
+    capabilities:
+      - "embedding"
+    supports_streaming: false
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: false
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 3000
+      tokens_per_minute: 1000000
+    default_temperature: 0.0
+
+  text-embedding-3-large:
+    provider: "openai"
+    model_id: "text-embedding-3-large"
+    display_name: "Text Embedding 3 Large"
+    description: "OpenAI's most capable embedding model (3072 dimensions)"
+    context_window: 8191
+    max_output_tokens: 0
+    embedding_dimension: 3072
+    pricing:
+      input: 0.13
+      output: 0.0
+    capabilities:
+      - "embedding"
+    supports_streaming: false
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: false
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 3000
+      tokens_per_minute: 1000000
+    default_temperature: 0.0
+
+  bge-m3:
+    provider: "local"
+    model_id: "BAAI/bge-m3"
+    display_name: "BGE-M3 (Local)"
+    description: "BAAI's multilingual embedding model supporting dense, sparse, and ColBERT retrieval"
+    context_window: 8192
+    max_output_tokens: 0
+    embedding_dimension: 1024
+    pricing:
+      input: 0.0
+      output: 0.0
+    capabilities:
+      - "embedding"
+      - "multilingual_embedding"
+      - "sparse_retrieval"
+      - "dense_retrieval"
+    supports_streaming: false
+    supports_caching: false
+    supports_vision: false
+    supports_function_calling: false
+    supports_parallel_tool_calls: false
+    rate_limit:
+      requests_per_minute: 500
+      tokens_per_minute: 500000
+    default_temperature: 0.0
+
+# ─── Model Categories (for UI organization) ──────────────────
+categories:
+  flagship:
+    - "gpt-4o"
+    - "claude-sonnet-4"
+    - "claude-opus-4"
+  efficient:
+    - "gpt-4o-mini"
+    - "claude-3-5-haiku"
+    - "deepseek-chat"
+  reasoning:
+    - "deepseek-reasoner"
+    - "claude-opus-4"
+    - "gpt-4o"
+  multilingual:
+    - "qwen-max"
+    - "claude-sonnet-4"
+    - "gpt-4o"
+    - "local-qwen-14b"
+  local:
+    - "local-llama-8b"
+    - "local-qwen-14b"
+  embedding:
+    - "text-embedding-3-small"
+    - "text-embedding-3-large"
+    - "bge-m3"

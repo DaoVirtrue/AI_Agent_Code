@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-platform-api
+  namespace: llm-platform
+  labels:
+    app: llm-platform
+    component: api
+spec:
+  type: ClusterIP
+  selector:
+    app: llm-platform
+    component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 8000
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 300
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-platform-worker
+  namespace: llm-platform
+  labels:
+    app: llm-platform
+    component: worker
+spec:
+  type: ClusterIP
+  selector:
+    app: llm-platform
+    component: worker
+  ports:
+    - name: metrics
+      port: 8001
+      targetPort: 8001
+      protocol: TCP

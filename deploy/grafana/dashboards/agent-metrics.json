@@ -1,0 +1,215 @@
+{
+  "dashboard": {
+    "uid": "llm-platform-agent",
+    "title": "LLM Platform - Agent Metrics",
+    "description": "Agent execution metrics: steps, loops, tool calls, execution time, success rate",
+    "tags": ["llm", "agent", "automation"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Agent Executions Rate",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(agent_execution_seconds_count[5m])) by (agent_type)",
+            "legendFormat": "{{agent_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Agent Steps per Execution",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_steps_bucket[5m])) by (agent_type)",
+            "legendFormat": "P50 - {{agent_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(agent_steps_bucket[5m])) by (agent_type)",
+            "legendFormat": "P95 - {{agent_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 10},
+                {"color": "red", "value": 15}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Execution Time (P50/P95)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_execution_seconds_bucket[5m])) by (agent_type)",
+            "legendFormat": "P50 - {{agent_type}}"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(agent_execution_seconds_bucket[5m])) by (agent_type)",
+            "legendFormat": "P95 - {{agent_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth"}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Loop Detections",
+        "type": "timeseries",
+        "gridPos": {"h": 7, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(agent_loop_detections_total[5m])) by (agent_type)",
+            "legendFormat": "{{agent_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {"drawStyle": "bars", "fillOpacity": 80},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 0}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Total Loop Detections",
+        "type": "stat",
+        "gridPos": {"h": 7, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(increase(agent_loop_detections_total[1h]))",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "options": {"textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 6,
+        "title": "Avg Steps per Agent Type",
+        "type": "bargauge",
+        "gridPos": {"h": 7, "w": 6, "x": 18, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_steps_bucket[1h])) by (agent_type)",
+            "legendFormat": "{{agent_type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 8},
+                {"color": "red", "value": 12}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Tool Calls by Tool Name",
+        "type": "piechart",
+        "gridPos": {"h": 7, "w": 12, "x": 0, "y": 15},
+        "targets": [
+          {
+            "expr": "sum(rate(agent_tool_calls_total[1h])) by (tool_name)",
+            "legendFormat": "{{tool_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {}
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Tool Calls Over Time",
+        "type": "timeseries",
+        "gridPos": {"h": 7, "w": 12, "x": 12, "y": 15},
+        "targets": [
+          {
+            "expr": "sum(rate(agent_tool_calls_total[5m])) by (tool_name)",
+            "legendFormat": "{{tool_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "stacking": {"mode": "normal"}}
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Agent Execution Distribution",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+        "targets": [
+          {
+            "expr": "sum(rate(agent_execution_seconds_bucket[5m])) by (le)",
+            "legendFormat": "{{le}}",
+            "format": "heatmap"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {}
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

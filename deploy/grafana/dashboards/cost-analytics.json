@@ -1,0 +1,291 @@
+{
+  "dashboard": {
+    "uid": "llm-platform-cost",
+    "title": "LLM Platform - Cost Analytics",
+    "description": "Cost and token usage analytics: spend by provider/model/tenant, token consumption trends",
+    "tags": ["llm", "cost", "billing", "tokens"],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "1m",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Cost Rate (USD/hour)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(cost_total_usd[5m])) by (provider, model)",
+            "legendFormat": "{{provider}}/{{model}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "stacking": {"mode": "normal"}, "fillOpacity": 20}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Cumulative Cost (Today)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(increase(cost_total_usd[24h]))",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 100},
+                {"color": "red", "value": 500}
+              ]
+            }
+          }
+        },
+        "options": {"textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 3,
+        "title": "Cost This Week",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(increase(cost_total_usd[7d]))",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 500},
+                {"color": "red", "value": 2000}
+              ]
+            }
+          }
+        },
+        "options": {"textMode": "auto", "colorMode": "value"}
+      },
+      {
+        "id": 4,
+        "title": "Token Usage Rate (tokens/sec)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(token_usage_total[5m])) by (type)",
+            "legendFormat": "{{type}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "stacking": {"mode": "normal"}, "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Token Consumption by Tenant",
+        "type": "barchart",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(token_usage_total[1h])) by (tenant_id))",
+            "legendFormat": "{{tenant_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {"fillOpacity": 80}
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Cost by Tenant (Top 10)",
+        "type": "bargauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "topk(10, sum(rate(cost_total_usd[6h])) by (tenant_id))",
+            "legendFormat": "{{tenant_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "orange", "value": 5},
+                {"color": "red", "value": 20}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Cost vs Yesterday Comparison",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(cost_total_usd[1h]))",
+            "legendFormat": "Today"
+          },
+          {
+            "expr": "sum(rate(cost_total_usd[1h] offset 1d))",
+            "legendFormat": "Yesterday"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Cost Distribution by Model",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(cost_total_usd[24h])) by (model)",
+            "legendFormat": "{{model}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {},
+            "unit": "USD"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Token Usage (Input vs Output vs Cached)",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "sum(rate(token_usage_total{type=\"input\"}[5m]))",
+            "legendFormat": "Input Tokens"
+          },
+          {
+            "expr": "sum(rate(token_usage_total{type=\"output\"}[5m]))",
+            "legendFormat": "Output Tokens"
+          },
+          {
+            "expr": "sum(rate(token_usage_total{type=\"cached\"}[5m]))",
+            "legendFormat": "Cached Tokens"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "custom": {"drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10}
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Cost Spike Alert Status",
+        "type": "statetimeline",
+        "gridPos": {"h": 5, "w": 24, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "rate(cost_total_usd[1h]) / (rate(cost_total_usd[1h] offset 1d) + 0.001)",
+            "legendFormat": "Cost Spike Ratio"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 1.2},
+                {"color": "red", "value": 1.5}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Average Cost per Request",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(cost_total_usd[1h])) / sum(rate(gateway_requests_total[1h]))",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 4,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "orange", "value": 0.01},
+                {"color": "red", "value": 0.05}
+              ]
+            }
+          }
+        },
+        "options": {"textMode": "auto"}
+      },
+      {
+        "id": 12,
+        "title": "Token Efficiency (Tokens/$)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(token_usage_total[1h])) / (sum(rate(cost_total_usd[1h])) + 0.0001)",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "decimals": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "orange", "value": 10000},
+                {"color": "green", "value": 50000}
+              ]
+            }
+          }
+        },
+        "options": {"textMode": "auto"}
+      }
+    ]
+  },
+  "overwrite": true
+}

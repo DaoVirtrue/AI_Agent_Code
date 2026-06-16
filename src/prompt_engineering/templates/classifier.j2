@@ -1,0 +1,184 @@
+{#-
+============================================================================
+  Intent Classifier Prompt Template
+  Purpose: Classify a user query into a predefined intent category with
+           confidence scoring and reasoning.
+  Usage:   Render with query, categories[], few_shot_examples[], language,
+           and output_format variables.
+  Author:  LLM Platform Team
+  Version: 1.0.0
+============================================================================
+-#}
+
+{#- ========================================================================= #}
+{#-                          CLASSIFICATION TASK                             #}
+{#- ========================================================================= #}
+
+Your task is to classify the following user query into EXACTLY ONE of the
+predefined intent categories listed below. For each classification, you must
+provide:
+  - The selected intent category name
+  - A confidence score between 0.0 and 1.0
+  - A brief reasoning chain explaining your decision
+
+{#- ========================================================================= #}
+{#-                             LANGUAGE DIRECTIVE                           #}
+{#- ========================================================================= #}
+{%- if language and language != 'auto' %}
+The input query will be in {{ language | title }}. Your reasoning and category
+descriptions should also be interpreted in {{ language | title }}.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                          INTENT CATEGORIES                               #}
+{#- ========================================================================= #}
+
+INTENT CATEGORIES:
+
+{%- if categories %}
+{%- for cat in categories %}
+{{ loop.index }}. {{ cat.name }}
+   Description: {{ cat.description | default('No description provided.') }}
+{%- if cat.examples %}
+   Examples:
+{%- for ex in cat.examples %}
+     - "{{ ex }}"
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+{%- else %}
+WARNING: No intent categories defined. Classification is not possible.
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                       CLASSIFICATION RULES                               #}
+{#- ========================================================================= #}
+
+CLASSIFICATION RULES:
+
+1. SINGLE INTENT: Assign EXACTLY ONE category per query. If the query spans
+   multiple intents, select the PRIMARY intent (the one most central to the
+   user's goal) and note secondary intents in your reasoning.
+
+2. CONFIDENCE CALIBRATION:
+   - 0.90 - 1.00: Highly confident (query is unambiguous, matches category
+     examples closely).
+   - 0.70 - 0.89: Moderately confident (query fits the category well but
+     includes minor ambiguities or could be interpreted differently).
+   - 0.50 - 0.69: Low confidence (query loosely fits; significant ambiguity).
+   - 0.00 - 0.49: Very low confidence (query is essentially unclassifiable
+     within the given categories — use "out_of_scope" and re-evaluate).
+
+3. EDGE CASE HANDLING:
+
+   a. AMBIGUOUS QUERIES: When a query is genuinely ambiguous between two or
+      more categories, select the one with the STRONGEST evidence, assign
+      moderate confidence (0.70-0.80), and explicitly note the alternative
+      categories and why they were not chosen in your reasoning.
+
+   b. OUT-OF-SCOPE QUERIES: If the query does NOT meaningfully belong to ANY
+      of the defined categories:
+      - Set the intent to "out_of_scope"
+      - Set confidence to reflect how certain you are that it is out of scope
+        (0.80+ means "clearly out of scope", <0.70 means "possibly fits but
+        I am uncertain")
+      - In reasoning, explain WHY it does not match any category and, if
+        possible, suggest what kind of category would be needed.
+
+   c. MALFORMED OR EMPTY QUERIES: If the query is empty, nonsensical, or
+      contains only noise:
+      - Set intent to "unclassifiable"
+      - Set confidence to 1.0 (you are certain it cannot be classified)
+      - Note the nature of the malformation in reasoning.
+
+   d. MULTI-TURN CONTEXT: If the query appears to be a follow-up in a
+      conversation (e.g., "and what about X?", "can you clarify?"), classify
+      based on the surface text but note in reasoning that it depends on
+      prior context and may need re-evaluation with full history.
+
+4. GREETINGS AND SMALL TALK: If the query is purely social (greetings, thanks,
+   casual remarks with no task-oriented request), use the most appropriate
+   category (such as "chitchat" or "greeting") or "out_of_scope" if no such
+   category exists. Set high confidence (0.85+) for clear greetings.
+
+{#- ========================================================================= #}
+{#-                         FEW-SHOT EXAMPLES                                #}
+{#- ========================================================================= #}
+
+{%- if few_shot_examples and few_shot_examples | length > 0 %}
+FEW-SHOT EXAMPLES:
+Study the following examples of correct classifications before classifying
+the actual query. These exemplify the expected output format and reasoning
+depth.
+
+{%- for ex in few_shot_examples %}
+EXAMPLE {{ loop.index }}:
+  Query:       "{{ ex.query }}"
+  Intent:      {{ ex.intent }}
+  Confidence:  {{ ex.confidence }}
+  Reasoning:   {{ ex.reasoning }}
+{%- endfor %}
+
+---
+Now classify the ACTUAL user query below, applying the same level of rigor
+demonstrated in the examples above.
+---
+
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                         OUTPUT FORMAT                                    #}
+{#- ========================================================================= #}
+
+OUTPUT FORMAT:
+You MUST output a single JSON object with the following structure. Do NOT
+include any text outside the JSON object. Do NOT wrap in markdown code
+blocks unless the output_format specifies it.
+
+{%- if output_format == 'json' or not output_format %}
+{
+  "intent": "<selected category name>",
+  "confidence": <float between 0.0 and 1.0>,
+  "reasoning": "<detailed step-by-step reasoning: why this intent, why this confidence level, alternatives considered>"
+}
+{%- elif output_format == 'json_with_alternatives' %}
+{
+  "intent": "<selected category name>",
+  "confidence": <float between 0.0 and 1.0>,
+  "reasoning": "<detailed step-by-step reasoning>",
+  "alternatives": [
+    {"intent": "<alternative category>", "confidence": <float>},
+    ...
+  ]
+}
+{%- elif output_format == 'verbose' %}
+{
+  "intent": "<selected category name>",
+  "confidence": <float between 0.0 and 1.0>,
+  "reasoning": "<detailed step-by-step reasoning>",
+  "alternatives": [
+    {"intent": "<alternative category>", "confidence": <float>}
+  ],
+  "flags": {
+    "is_ambiguous": <true|false>,
+    "is_out_of_scope": <true|false>,
+    "needs_context": <true|false>
+  },
+  "processing_time_ms": null
+}
+{%- else %}
+{
+  "intent": "<selected category name>",
+  "confidence": <float between 0.0 and 1.0>,
+  "reasoning": "<detailed step-by-step reasoning>"
+}
+{%- endif %}
+
+{#- ========================================================================= #}
+{#-                            USER QUERY                                    #}
+{#- ========================================================================= #}
+
+USER QUERY:
+"{{ query | trim }}"
+
+{#- end template #}

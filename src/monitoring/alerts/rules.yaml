@@ -1,0 +1,174 @@
+groups:
+  - name: llm_platform
+    rules:
+      - alert: HighErrorRate
+        expr: rate(gateway_requests_total{status="error"}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: P1
+          component: gateway
+        annotations:
+          summary: "Gateway error rate exceeded 1%"
+          description: "The gateway error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          runbook_url: "https://wiki.internal/runbooks/high-error-rate"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(gateway_latency_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: P2
+          component: gateway
+        annotations:
+          summary: "Gateway P99 latency exceeded 10 seconds"
+          description: "The P99 latency for provider {{ $labels.provider }} model {{ $labels.model }} is {{ $value }}s."
+          runbook_url: "https://wiki.internal/runbooks/high-latency"
+
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: P1
+          component: gateway
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} is OPEN"
+          description: "Circuit breaker {{ $labels.name }} has tripped open, requests are being rejected."
+          runbook_url: "https://wiki.internal/runbooks/circuit-breaker"
+
+      - alert: CircuitBreakerHalfOpen
+        expr: circuit_breaker_state == 2
+        for: 3m
+        labels:
+          severity: P2
+          component: gateway
+        annotations:
+          summary: "Circuit breaker {{ $labels.name }} is HALF_OPEN"
+          description: "Circuit breaker {{ $labels.name }} is testing recovery."
+
+      - alert: CostSpike
+        expr: rate(cost_total_usd[1h]) / (rate(cost_total_usd[1h] offset 1d) + 0.001) > 1.5
+        for: 15m
+        labels:
+          severity: P2
+          component: billing
+        annotations:
+          summary: "Cost spike detected: current cost rate is 1.5x the same time yesterday"
+          description: "Cost for tenant {{ $labels.tenant_id }} provider {{ $labels.provider }} is {{ $value | humanizePercentage }} of baseline."
+          runbook_url: "https://wiki.internal/runbooks/cost-spike"
+
+      - alert: HighTokenUsage
+        expr: rate(token_usage_total[1h]) > 1000000
+        for: 5m
+        labels:
+          severity: P3
+          component: billing
+        annotations:
+          summary: "High token usage rate detected"
+          description: "Token usage rate for tenant {{ $labels.tenant_id }} exceeded 1M tokens/hour."
+
+      - alert: AgentLoopDetected
+        expr: rate(agent_loop_detections_total[5m]) > 0
+        labels:
+          severity: P2
+          component: agent
+        annotations:
+          summary: "Agent loop detected"
+          description: "Agent type {{ $labels.agent_type }} entered a loop."
+
+      - alert: HighAgentSteps
+        expr: histogram_quantile(0.95, rate(agent_steps_bucket[10m])) > 15
+        for: 5m
+        labels:
+          severity: P3
+          component: agent
+        annotations:
+          summary: "Agents taking excessive steps"
+          description: "P95 agent steps exceeded 15 for agent type {{ $labels.agent_type }}."
+
+      - alert: RAGCacheMiss
+        expr: rate(rag_cache_hits_total{level="none"}[10m]) / (rate(rag_cache_hits_total[10m]) + 0.001) > 0.8
+        for: 10m
+        labels:
+          severity: P3
+          component: rag
+        annotations:
+          summary: "RAG cache miss rate is high (>80%)"
+          description: "High cache miss rate may indicate cache eviction issues or query pattern changes."
+
+      - alert: HighRateLimitRejections
+        expr: rate(rate_limit_hits_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: P2
+          component: gateway
+        annotations:
+          summary: "High rate limit rejection rate"
+          description: "Tenant {{ $labels.tenant_id }} is hitting rate limits for {{ $labels.limit_type }}."
+
+      - alert: InjectionAttemptDetected
+        expr: rate(injection_attempts_total{severity="critical"}[5m]) > 0
+        labels:
+          severity: P1
+          component: security
+        annotations:
+          summary: "Critical injection attempt detected"
+          description: "A critical-severity prompt injection attempt was detected."
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_size / db_connection_pool_size{pool="max"} > 0.9
+        for: 5m
+        labels:
+          severity: P1
+          component: infrastructure
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Database connection pool usage exceeds 90%."
+
+      - alert: RedisConnectionPoolExhausted
+        expr: redis_connection_pool_size / 50 > 0.9
+        for: 5m
+        labels:
+          severity: P1
+          component: infrastructure
+        annotations:
+          summary: "Redis connection pool nearly exhausted"
+
+      - alert: TTFTDegradation
+        expr: histogram_quantile(0.95, rate(ttft_seconds_bucket[10m])) > 5
+        for: 10m
+        labels:
+          severity: P2
+          component: gateway
+        annotations:
+          summary: "Time to first token (P95) exceeded 5 seconds"
+          description: "Streaming TTFT is degraded, P95 > {{ $value }}s."
+
+      - alert: ServiceDown
+        expr: up{job="llm-platform"} == 0
+        for: 1m
+        labels:
+          severity: P1
+          component: infrastructure
+        annotations:
+          summary: "LLM Platform service is DOWN"
+          description: "The llm-platform service is not responding to health checks."
+          runbook_url: "https://wiki.internal/runbooks/service-down"
+
+  - name: llm_platform_warnings
+    rules:
+      - alert: ElevatedErrorRate
+        expr: rate(gateway_requests_total{status="error"}[15m]) > 0.005
+        for: 10m
+        labels:
+          severity: P3
+          component: gateway
+        annotations:
+          summary: "Gateway error rate elevated (>0.5%)"
+
+      - alert: SlowRAGQueries
+        expr: histogram_quantile(0.95, rate(rag_retrieval_latency_seconds_bucket[10m])) > 5
+        for: 10m
+        labels:
+          severity: P3
+          component: rag
+        annotations:
+          summary: "RAG retrieval latency P95 exceeded 5 seconds"

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-platform-worker
+  namespace: llm-platform
+  labels:
+    app: llm-platform
+    component: worker
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: llm-platform
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: llm-platform
+        component: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: llm-platform-worker
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: worker
+          image: llm-platform-worker:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "src.worker.main"]
+          ports:
+            - name: metrics
+              containerPort: 8001
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: llm-platform-config
+            - secretRef:
+                name: llm-platform-secrets
+          env:
+            - name: WORKER_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+          volumeMounts:
+            - name: audit-logs
+              mountPath: /var/log/llm-platform/audit
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: audit-logs
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      terminationGracePeriodSeconds: 120
