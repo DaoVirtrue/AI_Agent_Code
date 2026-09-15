@@ -1,41 +1,47 @@
 export interface AgentRunRequest {
-  agent_type: string;
-  input: string;
+  task: string;
+  agent_type?: string;
+  tools?: string[];
+  max_steps?: number;
   model?: string;
-  parameters?: Record<string, unknown>;
-  tenant_id?: string;
+  temperature?: number;
+  system_prompt?: string;
+  verbose?: boolean;
+  require_approval?: boolean;
+}
+
+export interface AgentStep {
+  step_number: number;
+  action: string;
+  thought?: string;
+  observation?: string;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  tool_output?: string;
+  elapsed_ms?: number;
+  tokens_used?: number;
 }
 
 export interface AgentRunResponse {
   run_id: string;
-  status: 'completed' | 'failed' | 'running';
-  output: string;
+  result: string;
+  status: string; // completed | max_steps_reached | error | cancelled
   steps: AgentStep[];
+  total_steps: number;
   token_usage: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
   };
-  execution_time_ms: number;
-}
-
-export interface AgentStep {
-  step_number: number;
-  type: 'thought' | 'action' | 'observation' | 'final';
-  content: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  token_usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-  timestamp: string;
+  elapsed_ms: number;
+  cost_usd: number;
+  loop_detected: boolean;
 }
 
 export interface OrchestrateRequest {
   task: string;
-  agents: string[];
+  agents: Array<{ name: string; agent_type?: string; tools?: string[] }>;
+  workflow?: string;
+  max_steps_total?: number;
   model?: string;
-  tenant_id?: string;
 }
