@@ -21,6 +21,7 @@ const AgentPage = lazy(() => import('@/pages/AgentPage').then(m => ({ default: m
 const PromptsPage = lazy(() => import('@/pages/PromptsPage').then(m => ({ default: m.PromptsPage })));
 const GatewayPage = lazy(() => import('@/pages/GatewayPage').then(m => ({ default: m.GatewayPage })));
 const MCPPage = lazy(() => import('@/pages/MCPPage').then(m => ({ default: m.MCPPage })));
+const EvalPage = lazy(() => import('@/pages/EvalPage').then(m => ({ default: m.EvalPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/prompts" element={<SuspenseWrapper><PromptsPage /></SuspenseWrapper>} />
           <Route path="/gateway" element={<SuspenseWrapper><GatewayPage /></SuspenseWrapper>} />
           <Route path="/mcp" element={<SuspenseWrapper><MCPPage /></SuspenseWrapper>} />
+          <Route path="/eval" element={<SuspenseWrapper><EvalPage /></SuspenseWrapper>} />
           <Route path="/admin/*" element={
             <RouteGuard requiredRole="admin">
               <SuspenseWrapper><AdminPage /></SuspenseWrapper>
