@@ -28,16 +28,14 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     pytest>=8.0 pytest-asyncio>=0.24 python-multipart>=0.0.18 \
     sse-starlette>=2.0 aiofiles>=24.0
 
-# Batch 2: LLM/AI deps (core, no heavyweight ML)
-# NOTE: sentence-transformers / chromadb / pymilvus / FlagEmbedding are all
-# lazily imported in src/ with graceful fallbacks (hash embedder, in-memory
-# vector store), so they are intentionally NOT in the base image. Enable the
-# BGE-M3 / Milvus path by installing them on-demand.
+# Batch 2: LLM/AI deps (core + sentence-transformers for BGE-M3 embeddings)
+# NOTE: chromadb / pymilvus / FlagEmbedding / dspy / pdfplumber / python-docx
+# are lazily imported with graceful fallbacks, so they are NOT in the base image.
 RUN pip install --no-cache-dir --default-timeout=120 \
     langchain>=0.3 langgraph>=0.2 langchain-openai>=0.3 langchain-community>=0.3 \
     openai>=1.60 anthropic>=0.40 \
     tiktoken>=0.8 sentencepiece>=0.2 huggingface-hub>=0.26 \
-    numpy scipy
+    sentence-transformers>=3.3 numpy scipy
 
 # NOTE: Document-processing libraries (pdfplumber, python-docx, dspy) are all
 # lazily imported inside function bodies with graceful fallbacks, so they are

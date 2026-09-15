@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* highlight.js syntax theme for code blocks (github-dark on the dark code bg) */
+@import 'highlight.js/styles/github-dark.css';
+
 /* ===== Base ===== */
 html,
 body,
@@ -174,11 +177,18 @@ body {
 }
 
 .markdown-content pre {
-  background: #1e1e1e;
+  background: #0d1117;
   border-radius: 8px;
   padding: 12px;
   overflow-x: auto;
   margin: 0.75em 0;
+  border: 1px solid #30363d;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+  color: #e6edf3; /* ensure code text is light on the dark code block */
 }
 
 .markdown-content code {
@@ -186,9 +196,12 @@ body {
   font-size: 0.9em;
 }
 
-.markdown-content pre code {
-  background: transparent;
-  padding: 0;
+/* Inline code (not inside pre) keeps a light-on-light readable style */
+.markdown-content :not(pre) > code {
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677ff;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
 }
 
 .markdown-content ul,

@@ -168,6 +168,15 @@ class EmbeddingRegistry:
             max_batch_size=32,
             max_seq_length=8192,
         ),
+        "bge-small-zh-v1.5": EmbeddingModelConfig(
+            name="bge-small-zh-v1.5",
+            dim=512,
+            provider="local",
+            model_path="BAAI/bge-small-zh-v1.5",
+            supports_sparse=False,
+            max_batch_size=32,
+            max_seq_length=512,
+        ),
         "bge-large-en-v1.5": EmbeddingModelConfig(
             name="bge-large-en-v1.5",
             dim=1024,
