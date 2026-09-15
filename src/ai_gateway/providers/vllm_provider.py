@@ -15,7 +15,7 @@ import httpx
 import tiktoken
 from openai import AsyncOpenAI
 
-from ai_gateway.providers.base import (
+from src.ai_gateway.providers.base import (
     LLMRequest,
     LLMResponse,
     Message,

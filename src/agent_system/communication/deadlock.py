@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from agent_system.communication.protocol import AgentMessage, CommunicationBus
+from src.agent_system.communication.protocol import AgentMessage, CommunicationBus
 
 logger = logging.getLogger(__name__)
 

@@ -33,6 +33,37 @@ except ImportError:
     Counter = None  # type: ignore
 
 
+# ---------------------------------------------------------------------------
+# Metrics (module-level singletons, shared across all breaker instances)
+#
+# IMPORTANT: These must be defined exactly once at module import time. If
+# every CircuitBreaker instance re-registered the same metric names,
+# prometheus_client raises DuplicateTimeseries on the second instance.
+# Labeling by `breaker_name` lets a single metric family serve all breakers.
+# ---------------------------------------------------------------------------
+
+if _PROMETHEUS_AVAILABLE:
+    _STATE_GAUGE = Gauge(
+        "ai_gateway_circuit_breaker_state",
+        "Current circuit breaker state (0=CLOSED, 1=OPEN, 2=HALF_OPEN)",
+        ["breaker_name"],
+    )
+    _FAILURE_COUNTER = Counter(
+        "ai_gateway_circuit_breaker_failures_total",
+        "Total number of failures that triggered the circuit breaker",
+        ["breaker_name"],
+    )
+    _TRANSITION_COUNTER = Counter(
+        "ai_gateway_circuit_breaker_transitions_total",
+        "Total state transitions",
+        ["breaker_name", "from_state", "to_state"],
+    )
+else:
+    _STATE_GAUGE = None
+    _FAILURE_COUNTER = None
+    _TRANSITION_COUNTER = None
+
+
 class CircuitState(Enum):
     CLOSED = "closed"           # Normal operation
     OPEN = "open"                # Failing, rejecting requests
@@ -101,24 +132,11 @@ class CircuitBreaker:
         self._half_open_allowed: int = 0
         self._lock = asyncio.Lock()
 
-        # Prometheus metrics
-        if _PROMETHEUS_AVAILABLE:
-            self._state_gauge = Gauge(
-                "ai_gateway_circuit_breaker_state",
-                "Current circuit breaker state (0=CLOSED, 1=OPEN, 2=HALF_OPEN)",
-                ["breaker_name"],
-            )
-            self._failure_counter = Counter(
-                "ai_gateway_circuit_breaker_failures_total",
-                "Total number of failures that triggered the circuit breaker",
-                ["breaker_name"],
-            )
-            self._transition_counter = Counter(
-                "ai_gateway_circuit_breaker_transitions_total",
-                "Total state transitions",
-                ["breaker_name", "from_state", "to_state"],
-            )
-            self._export_metrics()
+        # Prometheus metrics (shared module-level singletons)
+        self._state_gauge = _STATE_GAUGE
+        self._failure_counter = _FAILURE_COUNTER
+        self._transition_counter = _TRANSITION_COUNTER
+        self._export_metrics()
 
     # ------------------------------------------------------------------
     # Public interface

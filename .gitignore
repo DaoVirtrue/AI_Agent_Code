@@ -66,3 +66,4 @@ frontend/build/
 
 # ─── OS ───────────────────────────────────────────────────────
 Thumbs.db
+coverage.xml

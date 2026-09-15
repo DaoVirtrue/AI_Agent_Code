@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from agent_system.memory.blackboard import SharedBlackboard
+from src.agent_system.memory.blackboard import SharedBlackboard
 
 logger = logging.getLogger(__name__)
 

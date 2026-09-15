@@ -129,20 +129,24 @@ export function GatewayPage() {
                 style={{ borderTop: `3px solid ${statusColor(p.status)}` }}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <Text strong className="text-base">{p.provider}</Text>
+                  <Text strong className="text-base">{p.name || p.provider}</Text>
                   <StatusBadge status={p.status} />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <Text type="secondary">延迟</Text>
-                    <Text strong>{p.latency > 0 ? p.latency.toFixed(0) + 'ms' : '未测量'}</Text>
+                    <Text type="secondary">P50 延迟</Text>
+                    <Text strong>{p.latencyP50 > 0 ? p.latencyP50 + 'ms' : (p.latency > 0 ? p.latency.toFixed(0) + 'ms' : '-')}</Text>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <Text type="secondary">成功率</Text>
-                    <Text strong>{p.successRate}%</Text>
+                    <Text type="secondary">P99 延迟</Text>
+                    <Text strong>{p.latencyP99 > 0 ? p.latencyP99 + 'ms' : '-'}</Text>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <Text type="secondary">可用率</Text>
+                    <Text strong>{p.uptime || p.successRate || 99.9}%</Text>
                   </div>
                   <Progress
-                    percent={p.successRate}
+                    percent={p.uptime || p.successRate || 99}
                     strokeColor={statusColor(p.status)}
                     size="small"
                     showInfo={false}

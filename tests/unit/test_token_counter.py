@@ -1,119 +1,89 @@
-"""Unit tests for the token counter module."""
+"""Unit tests for the unified TokenCounter (sync interface)."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+
+from src.token_management.counter import TokenCounter
+
+
+@pytest.fixture
+def counter() -> TokenCounter:
+    return TokenCounter()
 
 
 class TestTokenCounter:
-    """Tests for the TokenCounter class."""
+    """Tests for the sync TokenCounter.count()/count_messages() interface."""
 
-    @pytest.fixture
-    def counter(self):
-        """Create a token counter instance for testing."""
-        from src.gateway.token_counter import TokenCounter
-        return TokenCounter()
-
-    @pytest.mark.asyncio
-    async def test_count_tokens_simple_text(self, counter):
-        """Test counting tokens in simple text."""
-        count = await counter.count_tokens(model="gpt-4o", text="Hello world")
+    def test_count_simple_text(self, counter):
+        count = counter.count("Hello world", "gpt-4o")
         assert count > 0
         assert isinstance(count, int)
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_empty_text(self, counter):
-        """Test counting tokens in empty text returns 0."""
-        count = await counter.count_tokens(model="gpt-4o", text="")
-        assert count == 0
+    def test_count_empty_text_returns_zero(self, counter):
+        assert counter.count("", "gpt-4o") == 0
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_messages_list(self, counter):
-        """Test counting tokens in a list of messages."""
+    def test_count_messages_list(self, counter):
         messages = [
             {"role": "system", "content": "You are helpful."},
             {"role": "user", "content": "What is AI?"},
         ]
-        count = await counter.count_tokens(model="gpt-4o", messages=messages)
+        count = counter.count_messages(messages, "gpt-4o")
         assert count > 0
         assert isinstance(count, int)
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_with_tools(self, counter):
-        """Test counting tokens with tool definitions included."""
-        messages = [{"role": "user", "content": "Search for cats"}]
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "search",
-                    "description": "Search the web",
-                    "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
-                },
-            }
-        ]
-        count = await counter.count_tokens(
-            model="gpt-4o",
-            messages=messages,
-            tools=tools,
-        )
-        assert count > 0
-
-    @pytest.mark.asyncio
-    async def test_count_tokens_different_models(self, counter):
-        """Test that different models produce valid token counts."""
+    def test_count_different_openai_models(self, counter):
         text = "Hello, this is a test message for token counting."
-        for model in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "claude-3-opus"]:
-            count = await counter.count_tokens(model=model, text=text)
+        for model in ["gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-3.5-turbo"]:
+            count = counter.count(text, model)
             assert count > 0, f"Model {model} returned {count}"
-            assert isinstance(count, int)
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_unicode_text(self, counter):
-        """Test counting tokens in Unicode/multilingual text."""
+    def test_count_unicode_text(self, counter):
         text = "Hello world 你好世界 こんにちは мир"
-        count = await counter.count_tokens(model="gpt-4o", text=text)
+        count = counter.count(text, "gpt-4o")
         assert count > 0
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_long_text(self, counter):
-        """Test counting tokens in very long text."""
+    def test_count_long_text(self, counter):
         text = "Test " * 10000
-        count = await counter.count_tokens(model="gpt-4o", text=text)
+        count = counter.count(text, "gpt-4o")
         assert count > 0
-        assert count >= 5000  # Should be at least half the words
+        assert count >= 5000  # ~half the words
 
-    @pytest.mark.asyncio
-    async def test_count_tokens_none_model_fallback(self, counter):
-        """Test that None model falls back to default counting."""
-        count = await counter.count_tokens(model=None, text="Hello")
+    def test_count_unknown_model_falls_back(self, counter):
+        # Unknown model should fall back through encoders to heuristic
+        count = counter.count("Hello", "unknown-model-xyz")
         assert count > 0
 
+    def test_count_special_characters(self, counter):
+        text = "```python\nprint('hello')\n```\n\n**bold** and *italic*"
+        count = counter.count(text, "gpt-4o")
+        assert count > 0
 
-class TestTokenCounterEdgeCases:
-    """Edge case tests for token counter."""
+    def test_count_consistent_results(self, counter):
+        text = "Consistency test text."
+        assert counter.count(text, "gpt-4o") == counter.count(text, "gpt-4o")
+
+
+class TestTokenCounterCJK:
+    """Edge cases for CJK / heuristic estimation."""
 
     @pytest.fixture
-    def counter(self):
-        from src.gateway.token_counter import TokenCounter
+    def counter(self) -> TokenCounter:
         return TokenCounter()
 
-    @pytest.mark.asyncio
-    async def test_count_with_special_characters(self, counter):
-        """Test counting tokens with special characters and markdown."""
-        text = "```python\nprint('hello')\n```\n\n**bold** and *italic*"
-        count = await counter.count_tokens(model="gpt-4o", text=text)
+    def test_cjk_estimation(self, counter):
+        # Unknown model triggers heuristic estimation (CJK-aware)
+        count = counter.count("人工智能改变世界", "unknown-model")
         assert count > 0
 
-    @pytest.mark.asyncio
-    async def test_load_tokenizers(self, counter):
-        """Test that tokenizers can be loaded without errors."""
-        await counter.load_tokenizers()
-        # Should not raise any exception
+    def test_empty_messages_returns_zero(self, counter):
+        assert counter.count_messages([], "gpt-4o") == 0
 
-    @pytest.mark.asyncio
-    async def test_cache_behavior(self, counter):
-        """Test that repeated calls for same text return consistent results."""
-        text = "Consistency test text."
-        count1 = await counter.count_tokens(model="gpt-4o", text=text)
-        count2 = await counter.count_tokens(model="gpt-4o", text=text)
-        assert count1 == count2
+    def test_multimodal_content(self, counter):
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "Describe this image"},
+                {"type": "image_url", "image_url": {"url": "http://x/y.png"}},
+            ],
+        }]
+        count = counter.count_messages(messages, "gpt-4o")
+        assert count > 0

@@ -44,8 +44,12 @@ async def _init_redis(app: FastAPI):
     _redis_pool = aioredis.ConnectionPool.from_url(
         redis_url, max_connections=50, decode_responses=True,
     )
-    app.state.redis = aioredis.Redis(connection_pool=_redis_pool)
-    await app.state.redis.ping()
+    client = aioredis.Redis(connection_pool=_redis_pool)
+    # Only publish the client to app.state after a successful ping, so that
+    # dependency injection (`get_redis`) can cleanly report 503 when Redis is
+    # unavailable instead of handing out a broken client.
+    await client.ping()
+    app.state.redis = client
 
 
 async def _init_token_counter(app: FastAPI):
@@ -69,6 +73,32 @@ async def _init_deepseek_client(app: FastAPI):
     logger.info("DeepSeek client initialized")
 
 
+async def _init_agent_executor(app: FastAPI):
+    """Initialize the unified AgentExecutor and ToolRegistry.
+
+    The executor bridges the four agent patterns (ReAct / PlanExecute /
+    ReWOO / Reflection) behind a single execute() contract. The tool
+    registry is populated with the built-in tools (calculator, search, etc.).
+    """
+    from src.agent_system.tools.registry import ToolRegistry
+    from src.agent_system.executor import AgentExecutor
+    from src.agent_system.tools.builtins import (
+        WebSearchTool,
+        CalculatorTool,
+        WebFetchTool,
+    )
+
+    tool_registry = ToolRegistry()
+    for tool in (WebSearchTool(), CalculatorTool(), WebFetchTool()):
+        try:
+            tool_registry.register(tool)
+        except Exception as exc:  # noqa: BLE001 - resilient startup
+            logger.warning("Failed to register tool %s: %s", tool.definition.name, exc)
+
+    app.state.tool_registry = tool_registry
+    app.state.agent_executor = AgentExecutor(tool_registry=tool_registry)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──
@@ -78,6 +108,7 @@ async def lifespan(app: FastAPI):
     await _try_init("redis", _init_redis(app))
     await _try_init("token_counter", _init_token_counter(app))
     await _try_init("deepseek_client", _init_deepseek_client(app))
+    await _try_init("agent_executor", _init_agent_executor(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield

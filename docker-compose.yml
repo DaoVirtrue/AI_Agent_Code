@@ -156,7 +156,7 @@ services:
     depends_on:
       - app
     ports:
-      - "3000:80"
+      - "3001:80"
     networks:
       - llm-platform-net
     logging: *default-logging

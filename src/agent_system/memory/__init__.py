@@ -11,13 +11,13 @@ Hierarchical memory architecture:
 - SharedBlackboard: Multi-agent shared namespace with pub/sub
 """
 
-from agent_system.memory.short_term import ShortTermMemory
-from agent_system.memory.long_term import LongTermMemory
-from agent_system.memory.episodic import EpisodicMemory, Episode
-from agent_system.memory.manager import MemoryManager, MemoryContext
-from agent_system.memory.forgetting_curve import ForgettingCurve
-from agent_system.memory.consolidation import MemoryConsolidationEngine
-from agent_system.memory.blackboard import SharedBlackboard
+from src.agent_system.memory.short_term import ShortTermMemory
+from src.agent_system.memory.long_term import LongTermMemory
+from src.agent_system.memory.episodic import EpisodicMemory, Episode
+from src.agent_system.memory.manager import MemoryManager, MemoryContext
+from src.agent_system.memory.forgetting_curve import ForgettingCurve
+from src.agent_system.memory.consolidation import MemoryConsolidationEngine
+from src.agent_system.memory.blackboard import SharedBlackboard
 
 __all__ = [
     "ShortTermMemory",

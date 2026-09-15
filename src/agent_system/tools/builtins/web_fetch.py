@@ -11,9 +11,15 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
-from httpx import HTTPStatusError, RedirectLoop, TimeoutException
+from httpx import HTTPStatusError, TimeoutException
 
-from agent_system.tools.base import BaseTool, ToolDefinition, ToolResult, ToolStatus
+# httpx >= 0.28 removed RedirectLoop in favor of TooManyRedirects.
+try:
+    from httpx import TooManyRedirects as _RedirectError
+except ImportError:  # pragma: no cover - older httpx
+    from httpx import RedirectLoop as _RedirectError  # type: ignore
+
+from src.agent_system.tools.base import BaseTool, ToolDefinition, ToolResult, ToolStatus
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +185,7 @@ class WebFetchTool(BaseTool):
                 status=ToolStatus.TIMEOUT,
                 error=f"Request timed out for: {url}",
             )
-        except RedirectLoop:
+        except _RedirectError:
             return ToolResult(
                 status=ToolStatus.FATAL_ERROR,
                 error=f"Too many redirects for: {url}",

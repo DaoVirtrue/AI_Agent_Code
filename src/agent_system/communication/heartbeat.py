@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from agent_system.communication.protocol import AgentMessage, CommunicationBus, MessageType
+from src.agent_system.communication.protocol import AgentMessage, CommunicationBus, MessageType
 
 logger = logging.getLogger(__name__)
 

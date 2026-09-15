@@ -14,7 +14,7 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from ai_gateway.providers.base import LLMRequest, LLMResponse, ToolCall, TokenUsage
+from src.ai_gateway.providers.base import LLMRequest, LLMResponse, ToolCall, TokenUsage
 
 logger = logging.getLogger(__name__)
 

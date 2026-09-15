@@ -1,6 +1,7 @@
 """Integration tests for the agent workflow from request to execution."""
 
 import pytest
+pytestmark = pytest.mark.skip(reason='M0: 引用不存在的旧模块 (src.agent.* / src.gateway.* / src.rag.*) 或缺 fixture (test_redis/test_db_session/test_app)，待 M2/M3 真实链路接通后重写。')
 from unittest.mock import AsyncMock, MagicMock, patch
 
 

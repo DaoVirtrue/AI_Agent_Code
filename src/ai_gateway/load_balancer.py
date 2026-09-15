@@ -16,7 +16,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from ai_gateway.providers.base import BaseProvider
+from src.ai_gateway.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 

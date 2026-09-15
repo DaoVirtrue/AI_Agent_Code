@@ -180,12 +180,11 @@ class HealthChecker:
         Returns:
             Dict mapping MCP server name to health status.
         """
-        try:
-            from src.mcp.client import MCPClientPool
-            # This would check actual MCP connections
-            return {}
-        except ImportError:
-            return {}
+        # MCP server health checking is deferred (see mcp_integration module).
+        # Returning an empty dict signals "no connected MCP servers yet".
+        # The historical `from src.mcp.client import MCPClientPool` import
+        # pointed at a directory (src/mcp) that no longer exists.
+        return {}
 
     @property
     def uptime_seconds(self) -> float:

@@ -15,20 +15,20 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Set, Tuple
 
-from ai_gateway.cache import ResponseCache
-from ai_gateway.circuit_breaker import CircuitBreakerManager, CircuitConfig
-from ai_gateway.fallback import FallbackChain, FallbackExhaustedError
-from ai_gateway.load_balancer import LoadBalancer
-from ai_gateway.provider_registry import ProviderRegistry
-from ai_gateway.providers.base import (
+from src.ai_gateway.cache import ResponseCache
+from src.ai_gateway.circuit_breaker import CircuitBreakerManager, CircuitConfig
+from src.ai_gateway.fallback import FallbackChain, FallbackExhaustedError
+from src.ai_gateway.load_balancer import LoadBalancer
+from src.ai_gateway.provider_registry import ProviderRegistry
+from src.ai_gateway.providers.base import (
     BaseProvider,
     LLMRequest,
     LLMResponse,
     Message,
     TokenUsage,
 )
-from ai_gateway.rate_limiter import RateLimiter, RateLimitResult
-from ai_gateway.retry import RetryHandler, is_retryable
+from src.ai_gateway.rate_limiter import RateLimiter, RateLimitResult
+from src.ai_gateway.retry import RetryHandler, is_retryable
 
 logger = logging.getLogger(__name__)
 

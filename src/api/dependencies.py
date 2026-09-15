@@ -56,8 +56,18 @@ async def get_redis(request: Request) -> Redis:
     """Get the Redis client from application state.
 
     Returns the shared Redis client instance.
+
+    Raises:
+        HTTPException: 503 if Redis was not initialized (e.g. unavailable
+            at startup), instead of failing with a bare AttributeError.
     """
-    return request.app.state.redis
+    redis_client = getattr(request.app.state, "redis", None)
+    if redis_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Redis service not initialized",
+        )
+    return redis_client
 
 
 async def get_gateway(request: Request):

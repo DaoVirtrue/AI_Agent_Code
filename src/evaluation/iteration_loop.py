@@ -1,6 +1,7 @@
 """Iteration closed loop: evaluate -> diagnose -> optimize -> verify cycle for RAG optimization."""
 
 import copy
+import statistics
 from dataclasses import dataclass, field
 from typing import Optional, Callable
 

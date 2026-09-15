@@ -15,7 +15,7 @@ import sys
 import uuid
 from typing import Any, Callable
 
-from agent_system.tools.base import BaseTool
+from src.agent_system.tools.base import BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -465,7 +465,7 @@ class MCPServer:
             port: Port number.
         """
         try:
-            from mcp_integration.server.transport.sse import create_sse_app
+            from src.mcp_integration.server.transport.sse import create_sse_app
             import uvicorn
         except ImportError as e:
             logger.error("SSE transport requires fastapi and uvicorn: %s", e)
