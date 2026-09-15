@@ -35,6 +35,10 @@ client.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Demo API key: backend authenticates via X-API-Key (seeded llm-demo-key).
+    if (config.headers) {
+      config.headers['X-API-Key'] = import.meta.env.VITE_DEMO_API_KEY || 'llm-demo-key';
+    }
     return config;
   },
   (error) => Promise.reject(error)

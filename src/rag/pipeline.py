@@ -64,6 +64,18 @@ class GenerationResult:
     latency_ms: float = 0.0
 
 
+@dataclass
+class RAGChatResult:
+    """The result of a conversational RAG query (chat endpoint)."""
+
+    answer: str
+    sources: list = field(default_factory=list)
+    latency_ms: float = 0.0
+    cost_usd: float = 0.0
+    token_usage: dict = field(default_factory=dict)
+    conversation_id: str = ""
+
+
 # ---------------------------------------------------------------------------
 # RAGPipeline
 # ---------------------------------------------------------------------------
@@ -298,6 +310,33 @@ class RAGPipeline:
         return (
             f"Based on the retrieved context, the most relevant information is:\n\n"
             f"{top}"
+        )
+
+    # ------------------------------------------------------------------
+    # Chat (conversational RAG)
+    # ------------------------------------------------------------------
+
+    async def chat(
+        self,
+        query: str,
+        top_k: int = 10,
+        strategy: str = "hybrid",
+        filters: Optional[dict] = None,
+        tenant_id: str = "default",
+        conversation_id: Optional[str] = None,
+    ) -> RAGChatResult:
+        """Answer a query with RAG (single-turn; history kept in-memory)."""
+        start = time.perf_counter()
+        retrieval = await self.retrieve(query, top_k=top_k, strategy=strategy, filters=filters, tenant_id=tenant_id)
+        contexts = [c.content for c in retrieval.chunks]
+        generation = await self.generate(query, contexts, tenant_id=tenant_id)
+        return RAGChatResult(
+            answer=generation.answer,
+            sources=retrieval.chunks,
+            latency_ms=(time.perf_counter() - start) * 1000,
+            cost_usd=generation.cost_usd,
+            token_usage=generation.token_usage,
+            conversation_id=conversation_id or "",
         )
 
     # ------------------------------------------------------------------
