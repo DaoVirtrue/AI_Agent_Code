@@ -10,7 +10,7 @@ x-healthcheck-defaults: &healthcheck-defaults
   retries: 5
   start_period: 10s
 
-x-app-depends-on: &app-depends-on
+x-api-depends-on: &api-depends-on
   postgres:
     condition: service_healthy
   redis:
@@ -83,15 +83,16 @@ services:
       - llm-platform-net
     logging: *default-logging
 
-  # --- Application ---
-  app:
+  # --- Application (backend API) ---
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: llm-platform-app
+    image: llm-platform-api
+    container_name: llm-platform-api
     restart: unless-stopped
     depends_on:
-      <<: *app-depends-on
+      <<: *api-depends-on
     environment:
       - LLM_PLATFORM_ENV=${LLM_PLATFORM_ENV:-development}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-llm_platform}:${POSTGRES_PASSWORD:-llm_platform_secret}@postgres:5432/${POSTGRES_DB:-llm_platform}
@@ -122,10 +123,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: llm-platform-worker
     container_name: llm-platform-worker
     restart: unless-stopped
     depends_on:
-      <<: *app-depends-on
+      <<: *api-depends-on
     environment:
       - LLM_PLATFORM_ENV=${LLM_PLATFORM_ENV:-development}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-llm_platform}:${POSTGRES_PASSWORD:-llm_platform_secret}@postgres:5432/${POSTGRES_DB:-llm_platform}
@@ -151,10 +153,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: llm-platform-frontend
     container_name: llm-platform-frontend
     restart: unless-stopped
     depends_on:
-      - app
+      - api
     ports:
       - "3001:80"
     networks:
