@@ -191,13 +191,19 @@ def get_celery_app() -> Celery:
 
 # ── Module-level Celery app for celery -A auto-discovery ──────
 # The `celery -A src.infrastructure.broker:celery_app` command needs a module-level instance.
+# Prefer the RABBITMQ_URL env var (set by docker-compose) so the worker connects
+# to the compose network's RabbitMQ rather than localhost.
+import os as _os
+
+_broker_url = _os.environ.get("RABBITMQ_URL", "amqp://guest:guest@localhost//")
+
 try:
     celery_app = create_celery_app()
 except Exception:
-    # Fallback: create a minimal unconfigured app if config fails
+    # Fallback: create a minimal app reading RABBITMQ_URL directly.
     celery_app = Celery("llm_platform")
     celery_app.config_from_object({
-        "broker_url": "amqp://guest:guest@localhost//",
+        "broker_url": _broker_url,
         "task_serializer": "json",
         "result_serializer": "json",
         "accept_content": ["json"],
