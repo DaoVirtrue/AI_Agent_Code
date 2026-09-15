@@ -141,7 +141,7 @@ services:
       - ./config:/app/config:ro
       - app_uploads:/app/uploads
       - app_cache:/app/cache
-    command: celery -A src.shared.broker:celery_app worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
+    command: celery -A src.infrastructure.broker:celery_app worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
     networks:
       - llm-platform-net
     logging: *default-logging
