@@ -3,7 +3,7 @@
 import pytest
 
 from src.core.tools import BaseTool, ToolDefinition, ToolResult, ToolStatus
-from src.agent_system.tools.registry import ToolRegistry
+from src.agents.tools.registry import ToolRegistry
 
 
 class _FakeTool(BaseTool):

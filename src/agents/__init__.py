@@ -14,13 +14,13 @@ Provides:
 __version__ = "1.0.0"
 
 from src.core.tools import BaseTool, ToolDefinition, ToolResult, ToolStatus
-from src.agent_system.tools.registry import ToolRegistry
-from src.agent_system.tools.sandbox import ExecutionSandbox
-from src.agent_system.tools.security import ToolSecurityManager
-from src.agent_system.patterns.react import ReActAgent
-from src.agent_system.patterns.plan_execute import PlanExecuteAgent
-from src.agent_system.patterns.rewoo import ReWOOAgent
-from src.agent_system.patterns.reflection import ReflectionAgent
+from src.agents.tools.registry import ToolRegistry
+from src.agents.tools.sandbox import ExecutionSandbox
+from src.agents.tools.security import ToolSecurityManager
+from src.agents.patterns.react import ReActAgent
+from src.agents.patterns.plan_execute import PlanExecuteAgent
+from src.agents.patterns.rewoo import ReWOOAgent
+from src.agents.patterns.reflection import ReflectionAgent
 from src.memory.short_term import ShortTermMemory
 from src.memory.long_term import LongTermMemory
 from src.memory.episodic import EpisodicMemory, Episode
@@ -28,20 +28,20 @@ from src.memory.manager import MemoryManager
 from src.memory.consolidation import MemoryConsolidationEngine
 from src.memory.forgetting_curve import ForgettingCurve
 from src.memory.blackboard import SharedBlackboard
-from src.agent_system.orchestration.sequential import SequentialOrchestrator
-from src.agent_system.orchestration.hierarchical import HierarchicalOrchestrator
-from src.agent_system.orchestration.debate import DebateOrchestrator
-from src.agent_system.orchestration.escalation import EscalationOrchestrator
-from src.agent_system.orchestration.blackboard import BlackboardOrchestrator
-from src.agent_system.orchestration.auction import AuctionOrchestrator
-from src.agent_system.orchestration.swarm import SwarmOrchestrator
-from src.agent_system.langgraph_workflows.supervisor import SupervisorAgent
-from src.agent_system.langgraph_workflows.conditional_router import ConditionalRouter
-from src.agent_system.langgraph_workflows.human_in_loop import HumanInTheLoopAgent
-from src.agent_system.communication.protocol import AgentMessage, CommunicationBus
-from src.agent_system.communication.heartbeat import HeartbeatMonitor
-from src.agent_system.communication.deadlock import DeadlockDetector
-from src.agent_system.safety import SafetyGuard
+from src.agents.orchestration.sequential import SequentialOrchestrator
+from src.agents.orchestration.hierarchical import HierarchicalOrchestrator
+from src.agents.orchestration.debate import DebateOrchestrator
+from src.agents.orchestration.escalation import EscalationOrchestrator
+from src.agents.orchestration.blackboard import BlackboardOrchestrator
+from src.agents.orchestration.auction import AuctionOrchestrator
+from src.agents.orchestration.swarm import SwarmOrchestrator
+from src.agents.langgraph_workflows.supervisor import SupervisorAgent
+from src.agents.langgraph_workflows.conditional_router import ConditionalRouter
+from src.agents.langgraph_workflows.human_in_loop import HumanInTheLoopAgent
+from src.agents.communication.protocol import AgentMessage, CommunicationBus
+from src.agents.communication.heartbeat import HeartbeatMonitor
+from src.agents.communication.deadlock import DeadlockDetector
+from src.agents.safety import SafetyGuard
 
 __all__ = [
     "BaseTool", "ToolDefinition", "ToolResult", "ToolStatus",

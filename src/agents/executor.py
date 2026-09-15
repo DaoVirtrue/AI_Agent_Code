@@ -22,12 +22,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.agent_system.tools.registry import ToolRegistry
+from src.agents.tools.registry import ToolRegistry
 from src.core.tools import BaseTool
-from src.agent_system.patterns.react import ReActAgent
-from src.agent_system.patterns.plan_execute import PlanExecuteAgent
-from src.agent_system.patterns.rewoo import ReWOOAgent
-from src.agent_system.patterns.reflection import ReflectionAgent
+from src.agents.patterns.react import ReActAgent
+from src.agents.patterns.plan_execute import PlanExecuteAgent
+from src.agents.patterns.rewoo import ReWOOAgent
+from src.agents.patterns.reflection import ReflectionAgent
 
 logger = logging.getLogger(__name__)
 

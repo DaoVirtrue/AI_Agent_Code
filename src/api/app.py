@@ -80,9 +80,9 @@ async def _init_agent_executor(app: FastAPI):
     ReWOO / Reflection) behind a single execute() contract. The tool
     registry is populated with the built-in tools (calculator, search, etc.).
     """
-    from src.agent_system.tools.registry import ToolRegistry
-    from src.agent_system.executor import AgentExecutor
-    from src.agent_system.tools.builtins import (
+    from src.agents.tools.registry import ToolRegistry
+    from src.agents.executor import AgentExecutor
+    from src.agents.tools.builtins import (
         WebSearchTool,
         CalculatorTool,
         WebFetchTool,

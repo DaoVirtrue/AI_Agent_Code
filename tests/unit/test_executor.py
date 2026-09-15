@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from src.agent_system.executor import AgentExecutor, AgentExecutionResult, AGENT_TYPE_MAP
-from src.agent_system.tools.registry import ToolRegistry
+from src.agents.executor import AgentExecutor, AgentExecutionResult, AGENT_TYPE_MAP
+from src.agents.tools.registry import ToolRegistry
 
 
 class _FakeLLM:

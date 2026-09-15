@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Any
 
 from src.core.tools import BaseTool, ToolDefinition, ToolResult, ToolStatus
-from src.agent_system.tools.sandbox import ExecutionSandbox
+from src.agents.tools.sandbox import ExecutionSandbox
 
 logger = logging.getLogger(__name__)
 
