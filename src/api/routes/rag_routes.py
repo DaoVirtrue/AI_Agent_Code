@@ -33,6 +33,17 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/v1/rag", tags=["RAG 知识库"])
 
+# In-memory evaluation run store (production: PostgreSQL)
+_eval_store = None
+
+
+def _get_eval_store():
+    global _eval_store
+    if _eval_store is None:
+        from src.ragas.report import EvalRunStore
+        _eval_store = EvalRunStore()
+    return _eval_store
+
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "text/plain",
@@ -353,6 +364,9 @@ async def evaluate(
             strategy=request.retrieval_strategy,
             tenant_id=tenant.tenant_id,
         )
+        # Persist the run for historical trend queries.
+        run = _get_eval_store().save(results, metadata={"tenant_id": tenant.tenant_id})
+        results["run_id"] = run.run_id
         return results
     except Exception as e:
         logger.error("RAG evaluation failed", error=str(e))
@@ -363,6 +377,36 @@ async def evaluate(
                 message=f"Evaluation failed: {str(e)}",
             ).model_dump(),
         )
+
+
+@router.get(
+    "/evaluate/runs",
+    response_model=dict,
+    responses={200: {"description": "评测历史列表"}},
+)
+async def list_eval_runs(
+    limit: int = 50,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
+    """列出历史评测 run（用于趋势图）。"""
+    runs = _get_eval_store().list_runs(limit=limit)
+    return {"items": runs, "total": len(runs)}
+
+
+@router.get(
+    "/evaluate/runs/{run_id}",
+    response_model=dict,
+    responses={200: {"description": "评测 run 详情"}},
+)
+async def get_eval_run(
+    run_id: str,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
+    """获取单个评测 run 的详情。"""
+    run = _get_eval_store().get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Evaluation run not found")
+    return run
 
 
 @router.get(
