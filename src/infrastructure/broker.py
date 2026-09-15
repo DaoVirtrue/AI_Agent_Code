@@ -190,7 +190,7 @@ def get_celery_app() -> Celery:
 
 
 # ── Module-level Celery app for celery -A auto-discovery ──────
-# The `celery -A src.shared.broker:celery_app` command needs a module-level instance.
+# The `celery -A src.infrastructure.broker:celery_app` command needs a module-level instance.
 try:
     celery_app = create_celery_app()
 except Exception:

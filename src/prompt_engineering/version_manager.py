@@ -18,7 +18,7 @@ from typing import Any, Optional
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.shared.models.prompt_template import PromptTemplate, PromptTemplateVersion
+from src.repositories.models.prompt_template import PromptTemplate, PromptTemplateVersion
 
 logger = logging.getLogger(__name__)
 

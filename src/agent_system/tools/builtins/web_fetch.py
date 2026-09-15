@@ -19,7 +19,7 @@ try:
 except ImportError:  # pragma: no cover - older httpx
     from httpx import RedirectLoop as _RedirectError  # type: ignore
 
-from src.agent_system.tools.base import BaseTool, ToolDefinition, ToolResult, ToolStatus
+from src.core.tools import BaseTool, ToolDefinition, ToolResult, ToolStatus
 
 logger = logging.getLogger(__name__)
 

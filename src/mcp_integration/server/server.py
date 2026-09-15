@@ -15,7 +15,7 @@ import sys
 import uuid
 from typing import Any, Callable
 
-from src.agent_system.tools.base import BaseTool
+from src.core.tools import BaseTool
 
 logger = logging.getLogger(__name__)
 

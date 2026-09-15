@@ -19,6 +19,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,7 +36,7 @@ class RequestLog(Base):
 
     __tablename__ = "request_logs"
     __table_args__ = (
-        Index("ix_request_logs_tenant_created", "tenant_id", "created_at".desc()),
+        Index("ix_request_logs_tenant_created", "tenant_id", text("created_at DESC")),
         Index("ix_request_logs_request_id", "request_id"),
         Index("ix_request_logs_parent_request_id", "parent_request_id"),
     )

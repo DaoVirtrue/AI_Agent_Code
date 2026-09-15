@@ -13,7 +13,7 @@ Provides:
 
 __version__ = "1.0.0"
 
-from src.agent_system.tools.base import BaseTool, ToolDefinition, ToolResult, ToolStatus
+from src.core.tools import BaseTool, ToolDefinition, ToolResult, ToolStatus
 from src.agent_system.tools.registry import ToolRegistry
 from src.agent_system.tools.sandbox import ExecutionSandbox
 from src.agent_system.tools.security import ToolSecurityManager

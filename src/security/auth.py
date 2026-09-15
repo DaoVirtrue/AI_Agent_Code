@@ -16,9 +16,9 @@ from typing import Optional
 from fastapi import Depends, Header, Request
 from sqlalchemy import select
 
-from .config import get_settings
-from .database import get_db
-from .exceptions import AuthenticationError, AuthorizationError
+from src.infrastructure.config import get_settings
+from src.repositories.database import get_db
+from src.core.exceptions import AuthenticationError, AuthorizationError
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ async def get_current_tenant(
         db = await anext(db_gen)  # type: ignore[arg-type]
     except (StopAsyncIteration, TypeError, RuntimeError):
         # If get_db cannot be resolved as a dependency, create a raw session.
-        from .database import get_session_factory
+        from src.repositories.database import get_session_factory
 
         factory = get_session_factory()
         db = factory()
@@ -133,8 +133,8 @@ async def get_current_tenant(
         _owned = True
 
     try:
-        from .models.api_key import APIKey
-        from .models.tenant import Tenant
+        from src.repositories.models.api_key import APIKey
+        from src.repositories.models.tenant import Tenant
 
         result = await db.execute(
             select(APIKey, Tenant)

@@ -77,7 +77,7 @@ async def get_redis() -> AsyncGenerator[Redis, None]:
     Usage::
 
         from fastapi import Depends
-        from shared.redis import get_redis
+        from src.infrastructure.redis import get_redis
 
         @router.get("/cache/{key}")
         async def get_value(key: str, r: Redis = Depends(get_redis)):

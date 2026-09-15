@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from .config import Settings, get_settings
+from src.infrastructure.config import Settings, get_settings
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     Usage::
 
         from fastapi import Depends
-        from shared.database import get_db
+        from src.repositories.database import get_db
 
         @router.get("/items")
         async def list_items(db: AsyncSession = Depends(get_db)):

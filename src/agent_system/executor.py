@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from src.agent_system.tools.registry import ToolRegistry
-from src.agent_system.tools.base import BaseTool
+from src.core.tools import BaseTool
 from src.agent_system.patterns.react import ReActAgent
 from src.agent_system.patterns.plan_execute import PlanExecuteAgent
 from src.agent_system.patterns.rewoo import ReWOOAgent
