@@ -4,6 +4,7 @@ from typing import Optional, Callable
 
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from redis.asyncio import Redis
 
@@ -142,21 +143,21 @@ async def _resolve_tenant_from_api_key(
             scopes=cached_data.get("scopes", "").split(",") if cached_data.get("scopes") else [],
         )
 
-    # Fallback: database lookup
+    # Fallback: database lookup (SHA-256 key hash)
     session_factory: async_sessionmaker = request.app.state.db_session_factory
     async with session_factory() as session:
-        from sqlalchemy import text
+        from src.repositories.models.api_key import APIKey
+        from src.repositories.models.tenant import Tenant
+        from src.security.auth import hash_api_key
 
+        key_hash = hash_api_key(api_key)
         result = await session.execute(
-            text(
-                "SELECT t.id as tenant_id, t.name, ak.user_id, ak.role, ak.scopes "
-                "FROM api_keys ak JOIN tenants t ON ak.tenant_id = t.id "
-                "WHERE ak.key_hash = crypt(:api_key, ak.key_hash) AND ak.is_active = true "
-                "AND t.is_active = true"
-            ),
-            {"api_key": api_key},
+            select(APIKey, Tenant)
+            .join(Tenant, Tenant.id == APIKey.tenant_id)
+            .where(APIKey.key_hash == key_hash, APIKey.is_active.is_(True), Tenant.is_active.is_(True))
+            .limit(1)
         )
-        row = result.fetchone()
+        row = result.one_or_none()
 
         if not row:
             raise HTTPException(
@@ -164,11 +165,14 @@ async def _resolve_tenant_from_api_key(
                 detail="Invalid or inactive API key",
             )
 
+        api_key_row, tenant_row = row
+        scopes = list(api_key_row.scopes or [])
+
         tenant = TenantContext(
-            tenant_id=row.tenant_id,
-            user_id=row.user_id,
-            role=row.role,
-            scopes=row.scopes.split(",") if row.scopes else [],
+            tenant_id=str(tenant_row.id),
+            user_id=str(api_key_row.user_id) if api_key_row.user_id else "anonymous",
+            role="admin",  # MVP: seed key is admin (no per-key role field on the model)
+            scopes=scopes,
         )
 
         # Cache for 5 minutes

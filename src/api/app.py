@@ -35,6 +35,57 @@ async def _init_database(app: FastAPI):
     )
     app.state.db_session_factory = async_sessionmaker(_db_engine, expire_on_commit=False)
 
+    # Create tables if they don't exist (MVP: no alembic migration yet).
+    # Tables include tenants, users, api_keys, conversations, documents,
+    # prompt_templates, request_logs, model_registry.
+    from src.repositories.models.base import Base
+    async with _db_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database tables ensured (create_all)")
+
+    # Seed a demo tenant + API key so authenticated endpoints work out-of-the-box.
+    await _seed_demo_data(app)
+
+
+async def _seed_demo_data(app: FastAPI):
+    """Seed a demo tenant and API key for out-of-the-box authenticated access."""
+    try:
+        from sqlalchemy import select
+        from src.repositories.models.tenant import Tenant
+        from src.repositories.models.api_key import APIKey
+        from src.security.auth import hash_api_key
+        from src.infrastructure.config import load_settings
+
+        load_settings()  # ensure settings are loaded for hash_api_key
+
+        session_factory = app.state.db_session_factory
+        async with session_factory() as session:
+            # Check if a demo tenant already exists
+            existing = await session.execute(
+                select(Tenant).where(Tenant.slug == "demo").limit(1)
+            )
+            if existing.scalar_one_or_none() is None:
+                tenant = Tenant(name="Demo Tenant", slug="demo", tier="enterprise")
+                session.add(tenant)
+                await session.flush()  # get tenant.id
+
+                # Seed a demo API key: plaintext "llm-demo-key"
+                demo_key = "llm-demo-key"
+                api_key = APIKey(
+                    tenant_id=tenant.id,
+                    key_hash=hash_api_key(demo_key),
+                    key_prefix=demo_key[:8],
+                    name="Demo Key",
+                    scopes=["read:all", "write:all"],
+                )
+                session.add(api_key)
+                await session.commit()
+                logger.info("Seeded demo tenant + API key (use X-API-Key: llm-demo-key)")
+            else:
+                logger.info("Demo tenant already exists, skipping seed")
+    except Exception as exc:  # noqa: BLE001 - seed is best-effort
+        logger.warning("Demo seed skipped: %s", exc)
+
 
 async def _init_redis(app: FastAPI):
     global _redis_pool
