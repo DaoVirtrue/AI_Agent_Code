@@ -39,6 +39,7 @@ const menuItems: MenuItem[] = [
   getItem('网关监控', '/gateway', <ApiOutlined />),
   getItem('MCP 管理', '/mcp', <LinkOutlined />),
   getItem('质量评测', '/eval', <ExperimentOutlined />),
+  getItem('文档生成', '/docs', <FileTextOutlined />),
   getItem('系统管理', '/admin', <SettingOutlined />, [
     getItem('概览', '/admin', <AppstoreOutlined />),
     getItem('租户管理', '/admin/tenants', <TeamOutlined />),

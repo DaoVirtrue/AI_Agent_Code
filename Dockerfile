@@ -37,10 +37,10 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     tiktoken>=0.8 sentencepiece>=0.2 huggingface-hub>=0.26 \
     sentence-transformers>=3.3 numpy scipy
 
-# NOTE: Document-processing libraries (pdfplumber, python-docx, dspy) are all
-# lazily imported inside function bodies with graceful fallbacks, so they are
-# intentionally excluded from the base image. PDF/DOCX upload parses to plain
-# text (built-in) when these are absent; install them on-demand for full parsing.
+# Batch 3: Document generation/processing (light, pure-Python)
+# docx/xlsx/pptx for the document-download feature; pdfplumber for PDF upload.
+RUN pip install --no-cache-dir --default-timeout=120 \
+    python-docx openpyxl python-pptx pdfplumber
 
 COPY pyproject.toml README.md ./
 COPY config ./config

@@ -129,6 +129,14 @@ async def _init_deepseek_client(app: FastAPI):
     logger.info("DeepSeek client + LLM adapter initialized")
 
 
+async def _init_document_generator(app: FastAPI):
+    """Initialize the document generation service (md/docx/xlsx/pptx download)."""
+    from src.services.document_generator import DocumentGenerator
+
+    app.state.document_generator = DocumentGenerator(llm=getattr(app.state, "llm", None))
+    logger.info("Document generator initialized (formats=%s)", app.state.document_generator.supported_formats())
+
+
 async def _init_agent_executor(app: FastAPI):
     """Initialize the unified AgentExecutor and ToolRegistry.
 
@@ -234,6 +242,7 @@ async def lifespan(app: FastAPI):
     await _try_init("deepseek_client", _init_deepseek_client(app))
     await _try_init("agent_executor", _init_agent_executor(app))
     await _try_init("rag_pipeline", _init_rag_pipeline(app))
+    await _try_init("document_generator", _init_document_generator(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield
@@ -306,6 +315,12 @@ def create_app(settings=None) -> FastAPI:
         app.include_router(admin_router)
     except Exception as e:
         logger.warning("Admin routes not loaded: %s", e)
+
+    try:
+        from src.api.routes.document_routes import router as document_router
+        app.include_router(document_router)
+    except Exception as e:
+        logger.warning("Document routes not loaded: %s", e)
 
     if settings:
         app.state.settings = settings
