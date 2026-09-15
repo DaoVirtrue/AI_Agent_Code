@@ -40,9 +40,10 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     numpy scipy
 
 # Batch 3: Document processing (light)
+# NOTE: dspy is lazily imported (src/domain/prompt_engineering/dspy_integration)
+# with graceful fallback, so it is excluded from the base image.
 RUN pip install --no-cache-dir --default-timeout=120 \
-    pdfplumber>=0.11 python-docx>=1.1 \
-    dspy>=2.6
+    pdfplumber>=0.11 python-docx>=1.1
 
 COPY pyproject.toml README.md ./
 COPY config ./config
