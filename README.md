@@ -98,21 +98,25 @@ llm-platform/
 │   ├── nginx/nginx.conf        #   /api → app:8000 反向代理
 │   └── src/                    #   React 页面 + 组件 + Zustand stores
 │
-├── src/                        # 256 个 Python 文件, 55K+ 行
-│   ├── ai_gateway/             # AI 网关 — 5 厂商 Provider / 熔断 / 限流 / 降级
-│   ├── token_management/       # Token 管理 — tiktoken+sentencepiece+HF 三编码器
-│   ├── context_management/     # 上下文管理 — 五区窗口 / Prompt Caching / Lost-in-Middle
-│   ├── prompt_engineering/     # Prompt 工程 — Jinja2 / AB 测试 / DSPy / MMR
-│   ├── rag_system/             # RAG 系统 — CRAG/Self-RAG/Adaptive/Graph/Agentic + 4级缓存
-│   ├── agent_system/           # Agent 系统 — 4模式 + 7编排 + LangGraph 工作流
-│   ├── mcp_integration/        # MCP 集成 — Server/Client (stdio+SSE)
-│   ├── conversation/           # 对话管理 — 指代消解 / FSM / 槽位填充
-│   ├── streaming/              # 流式架构 — SSE / 背压 / JSON缓冲 / 安全扫描
-│   ├── monitoring/             # 监控告警 — Prometheus / OTEL / 审计
-│   ├── evaluation/             # 评估体系 — RAGAS + TruLens + Golden Dataset
-│   ├── security/               # 安全防护 — 5层注入防御 / RBAC+ABAC / PII
-│   ├── api/                    # FastAPI 路由 + 中间件
-│   └── shared/                 # 共享基础设施 — DB / Redis / Celery / ORM
+├── src/                        # 十层架构 + 三大体系（见 docs/架构说明.md）
+│   ├── core/                   # 最底层 — 异常体系 + 工具契约 + 共享类型
+│   ├── api/                    # API 层 — FastAPI 路由 + 依赖注入
+│   ├── agents/                 # Agent 层 — ReAct/PEV + 7编排 + 工具 + 通信
+│   ├── mcp/                    # MCP 层 — Server/Client (stdio+SSE)
+│   ├── memory/                 # 记忆层 — STM/LTM/Episodic + 遗忘曲线
+│   ├── rag/                    # RAG 层 — chunk/embed/检索/生成 + 4级缓存
+│   ├── repositories/           # 持久化层 — ORM + database
+│   ├── infrastructure/         # 基础设施 — config/redis/broker/LLM适配器
+│   ├── security/               # 安全层 — auth/RBAC/ABAC/PII/注入防御
+│   ├── observability/          # 可观测 — metrics/tracing/health/audit
+│   ├── resilience/             # 韧性层 — 分层超时/重试预算/断点恢复/资源TTL
+│   ├── domain/                 # 领域层 — conversation/context/token/prompt
+│   ├── harness/                # ★ Harness 体系 — Agent 安全护栏
+│   ├── herms/                  # ★ Herms 体系 — 自进化闭环 H-E-R-M-S
+│   ├── ragas/                  # ★ RAGAS 体系 — RAG 质量评估五指标
+│   ├── ai_gateway/             # 模型网关层（自洽）— 熔断/限流/降级/负载均衡
+│   ├── streaming/              # 流式层（自洽）— SSE/背压/安全扫描
+│   └── evaluation/             # 评测层（自洽）— 六维评估/迭代闭环
 │
 ├── tests/                      # 139+ 测试用例
 ├── config/                     # YAML 配置 + 模型注册表(14模型)
