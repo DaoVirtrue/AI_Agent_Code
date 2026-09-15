@@ -171,7 +171,12 @@ async def _init_rag_pipeline(app: FastAPI):
 
     # Try BGE-M3 (real local embeddings); fall back to a hash embedder.
     try:
+        import importlib.util
+        if importlib.util.find_spec("sentence_transformers") is None:
+            raise ImportError("sentence_transformers not installed")
         embedder = EmbeddingRegistry().get_embedder("bge-m3")
+        if getattr(embedder, "_model", None) is None:
+            raise RuntimeError("BGE-M3 model failed to load")
     except Exception as exc:  # noqa: BLE001 - model download may be unavailable
         logger.warning("BGE-M3 unavailable (%s); using hash embedder", exc)
         embedder = _HashEmbedder(dim=1024)
