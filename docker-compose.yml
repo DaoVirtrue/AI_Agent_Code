@@ -106,6 +106,8 @@ services:
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - HF_HOME=/app/cache/huggingface
+      - HF_HUB_OFFLINE=1
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
@@ -114,6 +116,9 @@ services:
       - ./tests:/app/tests:ro
       - app_uploads:/app/uploads
       - app_cache:/app/cache
+      # Mount the host HuggingFace cache so embedding models (bge-small-zh / bge-m3)
+      # are loaded from the host instead of re-downloaded inside the container.
+      - ${HF_HOME:-~/.cache/huggingface}:/app/cache/huggingface:ro
     networks:
       - llm-platform-net
     logging: *default-logging
