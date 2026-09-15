@@ -133,9 +133,11 @@ async def _init_document_generator(app: FastAPI):
     """Initialize the document generation service (md/docx/xlsx/pptx download)."""
     from src.services.document_generator import DocumentGenerator
     from src.services.ocr_service import OCRService
+    from src.services.conversation_memory import ConversationMemory
 
     app.state.document_generator = DocumentGenerator(llm=getattr(app.state, "llm", None))
     app.state.ocr_service = OCRService(vision_llm=None)
+    app.state.conversation_memory = ConversationMemory(llm=getattr(app.state, "llm", None))
     logger.info(
         "Document generator initialized (formats=%s, ocr=%s)",
         app.state.document_generator.supported_formats(),
@@ -357,6 +359,49 @@ def create_app(settings=None) -> FastAPI:
         if r.status_code != 200:
             raise HTTPException(r.status_code, detail=r.text[:500])
         return r.json()
+
+    # Memory-aware chat endpoint: retains conversation state + compresses
+    # older turns into a summary so key facts survive context truncation.
+    class MemoryChatRequest(PydanticBase):
+        conversation_id: str = "default"
+        message: str = ""
+        model: str = "deepseek-chat"
+
+    @app.post("/v1/chat/memory")
+    async def memory_chat(req: MemoryChatRequest):
+        llm = getattr(app.state, "llm", None)
+        if not llm:
+            raise HTTPException(503, "LLM not initialized (DEEPSEEK_API_KEY required)")
+        memory: "ConversationMemory" = app.state.conversation_memory
+
+        # Add user message to memory
+        memory.add_message(req.conversation_id, "user", req.message)
+
+        # Build context (summary + recent STM)
+        context = await memory.build_context(req.conversation_id)
+
+        # Generate reply
+        try:
+            response = await llm.ainvoke(context)
+            reply = response.content if hasattr(response, "content") else str(response)
+        except Exception as e:
+            raise HTTPException(500, f"LLM generation failed: {e}")
+
+        # Add assistant reply to memory
+        memory.add_message(req.conversation_id, "assistant", reply)
+
+        return {
+            "conversation_id": req.conversation_id,
+            "reply": reply,
+            "memory_state": memory.get_state(req.conversation_id).to_dict(),
+        }
+
+    @app.get("/v1/chat/memory/{conversation_id}")
+    async def get_memory_state(conversation_id: str):
+        memory: "ConversationMemory" = getattr(app.state, "conversation_memory", None)
+        if not memory:
+            return {"error": "memory not initialized"}
+        return memory.get_state(conversation_id).to_dict()
 
     @app.post("/v1/rag/parse")
     async def parse_document(file: UploadFile):
