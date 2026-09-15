@@ -39,11 +39,10 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     tiktoken>=0.8 sentencepiece>=0.2 huggingface-hub>=0.26 \
     numpy scipy
 
-# Batch 3: Document processing (light)
-# NOTE: dspy is lazily imported (src/domain/prompt_engineering/dspy_integration)
-# with graceful fallback, so it is excluded from the base image.
-RUN pip install --no-cache-dir --default-timeout=120 \
-    pdfplumber>=0.11 python-docx>=1.1
+# NOTE: Document-processing libraries (pdfplumber, python-docx, dspy) are all
+# lazily imported inside function bodies with graceful fallbacks, so they are
+# intentionally excluded from the base image. PDF/DOCX upload parses to plain
+# text (built-in) when these are absent; install them on-demand for full parsing.
 
 COPY pyproject.toml README.md ./
 COPY config ./config
