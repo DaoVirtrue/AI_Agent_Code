@@ -465,7 +465,7 @@ class MCPServer:
             port: Port number.
         """
         try:
-            from src.mcp_integration.server.transport.sse import create_sse_app
+            from src.mcp.server.transport.sse import create_sse_app
             import uvicorn
         except ImportError as e:
             logger.error("SSE transport requires fastapi and uvicorn: %s", e)

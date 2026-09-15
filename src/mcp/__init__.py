@@ -10,9 +10,9 @@ Provides:
 
 __version__ = "1.0.0"
 
-from src.mcp_integration.server.server import MCPServer
-from src.mcp_integration.client.client import MCPClient
-from src.mcp_integration.registry import MCPRegistry
+from src.mcp.server.server import MCPServer
+from src.mcp.client.client import MCPClient
+from src.mcp.registry import MCPRegistry
 
 __all__ = [
     "MCPServer",

@@ -12,11 +12,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.agent_system.memory.consolidation import MemoryConsolidationEngine
-from src.agent_system.memory.episodic import Episode, EpisodicMemory
-from src.agent_system.memory.forgetting_curve import ForgettingCurve
-from src.agent_system.memory.long_term import LongTermMemory
-from src.agent_system.memory.short_term import ShortTermMemory
+from src.memory.consolidation import MemoryConsolidationEngine
+from src.memory.episodic import Episode, EpisodicMemory
+from src.memory.forgetting_curve import ForgettingCurve
+from src.memory.long_term import LongTermMemory
+from src.memory.short_term import ShortTermMemory
 
 logger = logging.getLogger(__name__)
 

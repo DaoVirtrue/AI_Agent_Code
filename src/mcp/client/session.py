@@ -119,7 +119,7 @@ class SessionManager:
                 await self._evict_least_recent()
 
             # Create and connect
-            from src.mcp_integration.client.client import MCPClient
+            from src.mcp.client.client import MCPClient
 
             client = MCPClient(
                 server_name=server_name,

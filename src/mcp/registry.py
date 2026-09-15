@@ -118,7 +118,7 @@ class MCPRegistry:
 
         async def connect_one(server_id: str, config: dict):
             try:
-                from src.mcp_integration.client.client import MCPClient
+                from src.mcp.client.client import MCPClient
 
                 client = MCPClient(
                     server_name=server_id,
@@ -310,7 +310,7 @@ class MCPRegistry:
 
     def _create_client(self, server_id: str, config: dict) -> Any:
         """Create an MCP client from config."""
-        from src.mcp_integration.client.client import MCPClient
+        from src.mcp.client.client import MCPClient
 
         client_config = {
             k: v for k, v in config.items()

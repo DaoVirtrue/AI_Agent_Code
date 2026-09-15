@@ -21,13 +21,13 @@ from src.agent_system.patterns.react import ReActAgent
 from src.agent_system.patterns.plan_execute import PlanExecuteAgent
 from src.agent_system.patterns.rewoo import ReWOOAgent
 from src.agent_system.patterns.reflection import ReflectionAgent
-from src.agent_system.memory.short_term import ShortTermMemory
-from src.agent_system.memory.long_term import LongTermMemory
-from src.agent_system.memory.episodic import EpisodicMemory, Episode
-from src.agent_system.memory.manager import MemoryManager
-from src.agent_system.memory.consolidation import MemoryConsolidationEngine
-from src.agent_system.memory.forgetting_curve import ForgettingCurve
-from src.agent_system.memory.blackboard import SharedBlackboard
+from src.memory.short_term import ShortTermMemory
+from src.memory.long_term import LongTermMemory
+from src.memory.episodic import EpisodicMemory, Episode
+from src.memory.manager import MemoryManager
+from src.memory.consolidation import MemoryConsolidationEngine
+from src.memory.forgetting_curve import ForgettingCurve
+from src.memory.blackboard import SharedBlackboard
 from src.agent_system.orchestration.sequential import SequentialOrchestrator
 from src.agent_system.orchestration.hierarchical import HierarchicalOrchestrator
 from src.agent_system.orchestration.debate import DebateOrchestrator
