@@ -3,8 +3,8 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/ \
-    PIP_TRUSTED_HOST=pypi.tuna.tsinghua.edu.cn \
+    PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
+    PIP_TRUSTED_HOST=mirrors.aliyun.com \
     PIP_DEFAULT_TIMEOUT=120 \
     PIP_RETRIES=5
 
@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     sqlalchemy[asyncio]>=2.0 asyncpg>=0.30 alembic>=1.14 \
     redis>=5.0 celery>=5.4 \
     prometheus-client>=0.21 structlog>=24.4 \
+    opentelemetry-api>=1.28 opentelemetry-sdk>=1.28 opentelemetry-exporter-otlp>=1.28 \
     httpx>=0.28 tenacity>=9.0 jinja2>=3.1 \
     pytest>=8.0 pytest-asyncio>=0.24 python-multipart>=0.0.18 \
     sse-starlette>=2.0 aiofiles>=24.0
@@ -32,7 +33,7 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     langchain>=0.3 langgraph>=0.2 langchain-openai>=0.3 langchain-community>=0.3 \
     openai>=1.60 anthropic>=0.40 \
     tiktoken>=0.8 sentencepiece>=0.2 huggingface-hub>=0.26 \
-    sentence-transformers>=3.3
+    sentence-transformers>=3.3 numpy scipy
 
 # Batch 3: Vector/DB/RAG deps (largest - chromadb, pymilvus)
 RUN pip install --no-cache-dir --default-timeout=120 \
