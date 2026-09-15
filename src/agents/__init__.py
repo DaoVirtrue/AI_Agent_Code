@@ -42,11 +42,13 @@ from src.agents.communication.protocol import AgentMessage, CommunicationBus
 from src.agents.communication.heartbeat import HeartbeatMonitor
 from src.agents.communication.deadlock import DeadlockDetector
 from src.agents.safety import SafetyGuard
+from src.agents.pev import PEVAgent, PEVResult, PEVState, PEVStep
 
 __all__ = [
     "BaseTool", "ToolDefinition", "ToolResult", "ToolStatus",
     "ToolRegistry", "ExecutionSandbox", "ToolSecurityManager",
     "ReActAgent", "PlanExecuteAgent", "ReWOOAgent", "ReflectionAgent",
+    "PEVAgent", "PEVResult", "PEVState", "PEVStep",
     "ShortTermMemory", "LongTermMemory", "EpisodicMemory", "Episode",
     "MemoryManager", "MemoryConsolidationEngine", "ForgettingCurve",
     "SharedBlackboard",

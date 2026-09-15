@@ -37,6 +37,7 @@ AGENT_TYPE_MAP = {
     "plan_execute": PlanExecuteAgent,
     "rewoo": ReWOOAgent,
     "reflection": ReflectionAgent,
+    "pev": "PEVAgent",  # handled specially (Plan-Execute-Verify)
 }
 
 # Agent types that do not use tools (reflection is self-critique only).
@@ -113,6 +114,9 @@ class AgentExecutor:
         """
         start = time.perf_counter()
 
+        if agent_type == "pev":
+            return await self._run_pev(task, tools, max_steps, llm, start)
+
         if agent_type not in AGENT_TYPE_MAP:
             return self._error_result(
                 task,
@@ -148,6 +152,42 @@ class AgentExecutor:
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+
+    async def _run_pev(
+        self,
+        task: str,
+        tools: list[str] | None,
+        max_steps: int | None,
+        llm: Any,
+        start: float,
+    ) -> AgentExecutionResult:
+        """Run the Plan-Execute-Verify agent (special-cased for its dict tools)."""
+        from src.agents.pev import PEVAgent
+        from src.harness.guard import Harness, HarnessConfig
+
+        if llm is None:
+            return self._error_result(task, "PEV requires an LLM", start)
+
+        # Resolve tools into a name -> callable dict
+        tool_dict = {}
+        for name in (tools or []):
+            try:
+                tool_dict[name] = self.tool_registry.get_tool(name)
+            except KeyError:
+                logger.warning("Unknown tool '%s' requested; skipped", name)
+
+        harness = Harness(HarnessConfig(max_steps=max_steps or self.max_steps))
+        agent = PEVAgent(llm=llm, tools=tool_dict, harness=harness)
+        result = await agent.run(task)
+
+        return AgentExecutionResult(
+            final_output=result.final_output,
+            status=result.status,
+            steps=result.steps,
+            loop_detected=result.loop_detected,
+            cost_usd=result.cost_usd,
+            elapsed_ms=result.elapsed_ms,
+        )
 
     def _resolve_tools(
         self, tool_names: list[str] | None, agent_type: str

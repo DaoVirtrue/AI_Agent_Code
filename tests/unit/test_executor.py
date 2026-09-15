@@ -28,7 +28,7 @@ class TestAgentExecutor:
     """Tests for executor wiring and error handling."""
 
     def test_supported_agent_types(self):
-        assert set(AGENT_TYPE_MAP) == {"react", "plan_execute", "rewoo", "reflection"}
+        assert set(AGENT_TYPE_MAP) == {"react", "plan_execute", "rewoo", "reflection", "pev"}
 
     @pytest.mark.asyncio
     async def test_unknown_agent_type_returns_error(self, executor):
