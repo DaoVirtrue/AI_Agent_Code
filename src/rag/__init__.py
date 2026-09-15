@@ -20,10 +20,9 @@ A comprehensive RAG system with:
 from .pipeline import (
     RAGPipeline,
     build_rag_graph,
-    RAGState,
-    RAGQueryRequest,
-    RAGQueryResponse,
-    RAGChatResponse,
+    RetrievalChunk,
+    RetrievalResult,
+    GenerationResult,
 )
 
 # ---- Ingestion ----
@@ -122,10 +121,9 @@ __all__ = [
     # Pipeline
     "RAGPipeline",
     "build_rag_graph",
-    "RAGState",
-    "RAGQueryRequest",
-    "RAGQueryResponse",
-    "RAGChatResponse",
+    "RetrievalChunk",
+    "RetrievalResult",
+    "GenerationResult",
     # Ingestion
     "DocumentParser",
     "OCREngine",

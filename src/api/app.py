@@ -99,6 +99,66 @@ async def _init_agent_executor(app: FastAPI):
     app.state.agent_executor = AgentExecutor(tool_registry=tool_registry)
 
 
+async def _init_rag_pipeline(app: FastAPI):
+    """Initialize a real RAG pipeline backed by a vector store + LLM.
+
+    Uses the InMemoryVectorStore (works without Milvus) with a hash-based
+    embedder fallback, and a DeepSeek LLM adapter when a key is present.
+    The Milvus/BGE-M3 wiring is enabled in M2's docker profile.
+    """
+    from src.rag.pipeline import RAGPipeline
+    from src.rag.indexing.vector_store import InMemoryVectorStore
+    from src.rag.embedding.registry import EmbeddingRegistry
+    from src.infrastructure.deepseek_llm import DeepSeekLLM
+
+    vector_store = InMemoryVectorStore()
+
+    # Try BGE-M3 (real local embeddings); fall back to a hash embedder.
+    try:
+        embedder = EmbeddingRegistry().get_embedder("bge-m3")
+    except Exception as exc:  # noqa: BLE001 - model download may be unavailable
+        logger.warning("BGE-M3 unavailable (%s); using hash embedder", exc)
+        embedder = _HashEmbedder(dim=1024)
+
+    # DeepSeek LLM for generation (optional — extractive fallback if no key).
+    llm = None
+    if app.state.deepseek_client is not None:
+        try:
+            llm = DeepSeekLLM(model="deepseek-chat")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("DeepSeek LLM adapter failed: %s", exc)
+
+    app.state.rag_pipeline = RAGPipeline(
+        vector_store=vector_store,
+        embedder=embedder,
+        llm=llm,
+    )
+
+
+class _HashEmbedder:
+    """Deterministic hash-based embedder (fallback when BGE-M3 unavailable)."""
+
+    def __init__(self, dim: int = 1024):
+        self._dim = dim
+        self.name = "hash-embedder"
+
+    async def embed(self, texts: list[str]):
+        import hashlib
+        import numpy as np
+        out = []
+        for text in texts:
+            vec = np.zeros(self._dim, dtype=float)
+            for token in text.lower().split():
+                h = int(hashlib.md5(token.encode()).hexdigest(), 16)
+                vec[h % self._dim] += 1.0
+            norm = np.linalg.norm(vec)
+            out.append(vec / norm if norm > 0 else vec)
+        return out
+
+    async def embed_query(self, query: str):
+        return (await self.embed([query]))[0]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──
@@ -109,6 +169,7 @@ async def lifespan(app: FastAPI):
     await _try_init("token_counter", _init_token_counter(app))
     await _try_init("deepseek_client", _init_deepseek_client(app))
     await _try_init("agent_executor", _init_agent_executor(app))
+    await _try_init("rag_pipeline", _init_rag_pipeline(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield
