@@ -1,6 +1,6 @@
 """Monitoring module - Prometheus metrics, OpenTelemetry tracing, logging, and alerts."""
 
-from src.monitoring.metrics import (
+from src.observability.metrics import (
     gateway_requests,
     gateway_latency,
     rag_cache_hits,
@@ -17,10 +17,10 @@ from src.monitoring.metrics import (
     pii_detections,
     get_metrics,
 )
-from src.monitoring.logging_setup import setup_logging, get_logger
-from src.monitoring.tracing import setup_tracing, get_tracer, trace_llm_call
-from src.monitoring.health import HealthChecker
-from src.monitoring.audit import AuditLogger
+from src.observability.logging_setup import setup_logging, get_logger
+from src.observability.tracing import setup_tracing, get_tracer, trace_llm_call
+from src.observability.health import HealthChecker
+from src.observability.audit import AuditLogger
 
 __all__ = [
     # Metrics

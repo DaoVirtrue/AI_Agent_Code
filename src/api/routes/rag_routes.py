@@ -23,8 +23,8 @@ from src.api.schemas.rag import (
     EvalRequest,
 )
 from src.api.schemas.common import ErrorResponse
-from src.monitoring.logging_setup import get_logger
-from src.monitoring.metrics import (
+from src.observability.logging_setup import get_logger
+from src.observability.metrics import (
     rag_cache_hits,
     rag_retrieval_latency,
 )
@@ -242,7 +242,7 @@ async def rag_search(
 
         # Token tracking
         token_usage_obj = generation_result.token_usage or {}
-        from src.monitoring.metrics import token_usage as token_usage_metric
+        from src.observability.metrics import token_usage as token_usage_metric
         token_usage_metric.labels(
             tenant_id=tenant.tenant_id,
             provider="rag",

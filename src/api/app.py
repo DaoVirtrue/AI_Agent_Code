@@ -53,7 +53,7 @@ async def _init_redis(app: FastAPI):
 
 
 async def _init_token_counter(app: FastAPI):
-    from src.token_management.counter import TokenCounter
+    from src.domain.token_management.counter import TokenCounter
     app.state.token_counter = TokenCounter()
 
 

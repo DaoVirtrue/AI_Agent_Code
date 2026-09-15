@@ -2,8 +2,8 @@
 
 import pytest
 
-from src.conversation.coreference import CoreferenceResolver
-from src.conversation.context_stitcher import ConversationHistory
+from src.domain.conversation.coreference import CoreferenceResolver
+from src.domain.conversation.context_stitcher import ConversationHistory
 
 
 def make_history(texts: list[str]) -> ConversationHistory:

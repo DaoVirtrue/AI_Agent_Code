@@ -16,11 +16,11 @@ Sub-packages:
 - dspy_integration: DSPy prompt optimization integration
 """
 
-from src.prompt_engineering.engine import PromptEngine
-from src.prompt_engineering.version_manager import PromptVersionManager
-from src.prompt_engineering.security import InjectionDefense
-from src.prompt_engineering.cost_optimizer import OptimizationResult, PromptCostOptimizer
-from src.prompt_engineering.drift_detector import DriftResult, PromptDriftDetector
+from src.domain.prompt_engineering.engine import PromptEngine
+from src.domain.prompt_engineering.version_manager import PromptVersionManager
+from src.domain.prompt_engineering.security import InjectionDefense
+from src.domain.prompt_engineering.cost_optimizer import OptimizationResult, PromptCostOptimizer
+from src.domain.prompt_engineering.drift_detector import DriftResult, PromptDriftDetector
 
 # Lazy imports for sub-packages that may have heavy dependencies
 _LAZY_IMPORTS: dict[str, list[str]] = {
@@ -59,7 +59,7 @@ def __getattr__(name: str):
             import importlib
 
             mod = importlib.import_module(
-                f"src.prompt_engineering.{module_name}"
+                f"src.domain.prompt_engineering.{module_name}"
             )
             attr = getattr(mod, name)
             # Cache in the module's globals so __getattr__ is not called again

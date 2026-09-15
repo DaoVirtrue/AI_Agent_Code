@@ -16,8 +16,8 @@ from src.api.schemas.agent import (
     ApprovalDecision,
 )
 from src.api.schemas.common import ErrorResponse
-from src.monitoring.logging_setup import get_logger
-from src.monitoring.metrics import (
+from src.observability.logging_setup import get_logger
+from src.observability.metrics import (
     agent_steps as agent_steps_metric,
     agent_loop_detections,
 )

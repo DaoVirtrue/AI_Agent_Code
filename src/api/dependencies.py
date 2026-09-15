@@ -7,7 +7,7 @@ from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from redis.asyncio import Redis
 
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

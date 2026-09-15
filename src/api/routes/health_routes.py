@@ -3,8 +3,8 @@
 from fastapi import APIRouter, Request
 
 from src.api.schemas.common import HealthResponse
-from src.monitoring.health import HealthChecker
-from src.monitoring.logging_setup import get_logger
+from src.observability.health import HealthChecker
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
@@ -131,7 +131,7 @@ async def metrics():
     以标准格式暴露所有已注册的 Prometheus 指标。
     """
     from fastapi.responses import Response
-    from src.monitoring.metrics import get_metrics
+    from src.observability.metrics import get_metrics
 
     metrics_text = get_metrics()
     return Response(content=metrics_text, media_type="text/plain; charset=utf-8")

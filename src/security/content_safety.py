@@ -3,8 +3,8 @@
 import re
 from typing import Optional
 
-from src.monitoring.logging_setup import get_logger
-from src.monitoring.metrics import content_safety_blocks
+from src.observability.logging_setup import get_logger
+from src.observability.metrics import content_safety_blocks
 
 logger = get_logger(__name__)
 

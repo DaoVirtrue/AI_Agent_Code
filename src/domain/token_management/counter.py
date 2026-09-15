@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from src.token_management.encoders.huggingface_encoder import HuggingFaceEncoder
-from src.token_management.encoders.sentencepiece_encoder import SentencePieceEncoder
-from src.token_management.encoders.tiktoken_encoder import TiktokenEncoder
+from src.domain.token_management.encoders.huggingface_encoder import HuggingFaceEncoder
+from src.domain.token_management.encoders.sentencepiece_encoder import SentencePieceEncoder
+from src.domain.token_management.encoders.tiktoken_encoder import TiktokenEncoder
 
 
 class TokenCounter:

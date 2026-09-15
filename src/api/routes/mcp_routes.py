@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from src.api.dependencies import get_current_tenant
 from src.api.dependencies import TenantContext
 from src.api.schemas.common import ErrorResponse
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

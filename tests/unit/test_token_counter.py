@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.token_management.counter import TokenCounter
+from src.domain.token_management.counter import TokenCounter
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ import json
 import logging
 from typing import Any
 
-from src.token_management.cost import CostTracker, ModelPricing
+from src.domain.token_management.cost import CostTracker, ModelPricing
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +206,7 @@ class CostOptimizer:
             return []
 
         if max_tokens is None:
-            from src.token_management.budget import BudgetConfig, TokenBudget
+            from src.domain.token_management.budget import BudgetConfig, TokenBudget
 
             budget_config = BudgetConfig(
                 system_pct=0.15,

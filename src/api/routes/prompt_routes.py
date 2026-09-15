@@ -15,7 +15,7 @@ from src.api.schemas.prompt import (
     ExperimentRequest,
 )
 from src.api.schemas.common import ErrorResponse, PaginatedResponse
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

@@ -57,7 +57,7 @@ class SlidingWindowTruncator:
             return []
 
         if max_tokens is None:
-            from src.context_management.window_manager import ContextWindowManager
+            from src.domain.context_management.window_manager import ContextWindowManager
 
             wm = ContextWindowManager()
             max_tokens = wm.get_window(model)
@@ -131,7 +131,7 @@ class SlidingWindowTruncator:
         Returns:
             Truncated messages list.
         """
-        from src.context_management.window_manager import ContextWindowManager
+        from src.domain.context_management.window_manager import ContextWindowManager
 
         wm = ContextWindowManager()
         full_window = wm.get_window(model)

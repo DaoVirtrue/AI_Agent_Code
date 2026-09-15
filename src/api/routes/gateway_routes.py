@@ -19,8 +19,8 @@ from src.api.schemas.gateway import (
     MessageDict,
 )
 from src.api.schemas.common import ErrorResponse
-from src.monitoring.logging_setup import get_logger
-from src.monitoring.metrics import (
+from src.observability.logging_setup import get_logger
+from src.observability.metrics import (
     gateway_requests as gw_requests_metric,
     gateway_latency as gw_latency_metric,
     token_usage as token_usage_metric,
@@ -225,7 +225,7 @@ async def _handle_streaming(
             ):
                 if first_token_time is None:
                     first_token_time = time.monotonic()
-                    from src.monitoring.metrics import ttft_histogram
+                    from src.observability.metrics import ttft_histogram
                     ttft_histogram.observe(first_token_time - start_time)
 
                 content_delta = chunk.get("content_delta", "")
@@ -247,7 +247,7 @@ async def _handle_streaming(
                 chunk_index += 1
 
                 # Record inter-token latency
-                from src.monitoring.metrics import itl_histogram
+                from src.observability.metrics import itl_histogram
                 itl_histogram.observe(time.monotonic() - start_time)
 
             # Send final event

@@ -10,8 +10,8 @@ from sqlalchemy import text
 from src.api.dependencies import get_current_tenant, get_db, require_scope
 from src.api.dependencies import TenantContext
 from src.api.schemas.common import ErrorResponse, PaginatedResponse
-from src.monitoring.audit import AuditLogger
-from src.monitoring.logging_setup import get_logger
+from src.observability.audit import AuditLogger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

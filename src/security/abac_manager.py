@@ -3,7 +3,7 @@
 from datetime import datetime, time
 from typing import Optional
 
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

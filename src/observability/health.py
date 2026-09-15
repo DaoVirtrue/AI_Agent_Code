@@ -7,7 +7,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy import text
 
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

@@ -7,8 +7,8 @@ lowest-priority zones on overflow.
 
 import pytest
 
-from src.context_management.five_zone_window import FiveZoneWindow
-from src.token_management.counter import TokenCounter
+from src.domain.context_management.five_zone_window import FiveZoneWindow
+from src.domain.token_management.counter import TokenCounter
 
 
 @pytest.fixture

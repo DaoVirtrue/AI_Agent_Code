@@ -4,8 +4,8 @@ import re
 import hashlib
 from typing import Optional
 
-from src.monitoring.logging_setup import get_logger
-from src.monitoring.metrics import pii_detections
+from src.observability.logging_setup import get_logger
+from src.observability.metrics import pii_detections
 
 logger = get_logger(__name__)
 

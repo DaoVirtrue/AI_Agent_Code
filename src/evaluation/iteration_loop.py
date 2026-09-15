@@ -7,7 +7,7 @@ from typing import Optional, Callable
 
 from src.evaluation.six_dimension import SixDimensionEvaluator, EvaluationResult
 from src.evaluation.drift_detector import DriftDetector, DriftResult
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

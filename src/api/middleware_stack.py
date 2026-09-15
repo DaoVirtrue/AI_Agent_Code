@@ -10,11 +10,11 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response, StreamingResponse
 
-from src.monitoring.metrics import (
+from src.observability.metrics import (
     gateway_requests,
     gateway_latency,
 )
-from src.monitoring.logging_setup import get_logger
+from src.observability.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
