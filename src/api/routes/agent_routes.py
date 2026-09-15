@@ -78,6 +78,7 @@ async def run_agent(
             system_prompt=request_body.system_prompt,
             verbose=request_body.verbose,
             tenant_id=tenant.tenant_id,
+            llm=getattr(http_request.app.state, "llm", None),
         )
     except Exception as e:
         logger.error("Agent execution failed", error=str(e), task=request_body.task[:200])
@@ -194,7 +195,7 @@ async def list_tools(
     if not tool_registry:
         return []
 
-    tools = await tool_registry.list_tools(tenant_id=tenant.tenant_id)
+    tools = tool_registry.list_all()
     return [
         {
             "name": t.name,

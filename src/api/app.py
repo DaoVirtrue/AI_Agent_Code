@@ -109,19 +109,24 @@ async def _init_token_counter(app: FastAPI):
 
 
 async def _init_deepseek_client(app: FastAPI):
-    """Initialize a simple DeepSeek client for direct API calls."""
+    """Initialize a simple DeepSeek client for direct API calls, plus a
+    LangChain-compatible DeepSeekLLM for agent / RAG generation."""
     import httpx, os
     api_key = os.environ.get("DEEPSEEK_API_KEY", "")
     if not api_key:
         logger.warning("DEEPSEEK_API_KEY not set, chat will not work")
         app.state.deepseek_client = None
+        app.state.llm = None
         return
     app.state.deepseek_client = httpx.AsyncClient(
         base_url="https://api.deepseek.com",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         timeout=60.0,
     )
-    logger.info("DeepSeek client initialized")
+    # LangChain-compatible LLM adapter (agent + RAG generation)
+    from src.infrastructure.deepseek_llm import DeepSeekLLM
+    app.state.llm = DeepSeekLLM(model="deepseek-chat")
+    logger.info("DeepSeek client + LLM adapter initialized")
 
 
 async def _init_agent_executor(app: FastAPI):
