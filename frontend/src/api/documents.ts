@@ -24,3 +24,14 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export async function ocrImage(file: File, generateAnswer: boolean, question?: string): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('generate_answer', String(generateAnswer));
+  if (question) formData.append('question', question);
+  const response = await client.post('/v1/documents/ocr', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}

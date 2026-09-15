@@ -132,9 +132,15 @@ async def _init_deepseek_client(app: FastAPI):
 async def _init_document_generator(app: FastAPI):
     """Initialize the document generation service (md/docx/xlsx/pptx download)."""
     from src.services.document_generator import DocumentGenerator
+    from src.services.ocr_service import OCRService
 
     app.state.document_generator = DocumentGenerator(llm=getattr(app.state, "llm", None))
-    logger.info("Document generator initialized (formats=%s)", app.state.document_generator.supported_formats())
+    app.state.ocr_service = OCRService(vision_llm=None)
+    logger.info(
+        "Document generator initialized (formats=%s, ocr=%s)",
+        app.state.document_generator.supported_formats(),
+        app.state.ocr_service.engine_status(),
+    )
 
 
 async def _init_agent_executor(app: FastAPI):
