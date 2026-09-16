@@ -77,18 +77,43 @@ async def list_available_tools(
     http_request: Request,
     tenant: TenantContext = Depends(get_current_tenant),
 ):
-    """列出可绑定到专家的所有技能/MCP 工具。"""
+    """列出可绑定到专家的所有技能/MCP 工具（含中文名）。"""
     registry = http_request.app.state.expert_registry
     tools = []
     for name, tool in registry.tools.items():
         d = tool.definition
         tools.append({
             "name": name,
+            "label": _TOOL_LABELS.get(name, name),
             "description": d.description,
             "category": d.category,
             "requires_approval": d.requires_approval,
         })
     return {"tools": tools, "total": len(tools)}
+
+
+# 工具名 -> 中文名（前端展示用，value 仍用英文 name 作为内部标识）
+_TOOL_LABELS = {
+    "cli.execute": "执行命令行（操作电脑）",
+    "document.generate": "生成文档（md/docx/xlsx/pptx）",
+    "document.ocr": "图片文字识别（OCR）",
+    "web_search": "网络搜索",
+    "calculator": "计算器",
+    "web_fetch": "网页抓取",
+    "search": "搜索",
+    "search_web": "网络搜索",
+    "search_knowledge_base": "知识库检索",
+    "query_database": "数据库查询",
+    "execute_code": "执行代码",
+    "send_email": "发送邮件",
+    "create_document": "创建文档",
+    "schedule_task": "定时任务",
+    "call_api": "调用 API",
+    "read_file": "读取文件",
+    "write_file": "写入文件",
+    "list_directory": "列出目录",
+    "search_files": "搜索文件",
+}
 
 
 @router.post("/run", response_model=dict)

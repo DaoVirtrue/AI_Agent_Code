@@ -11,6 +11,7 @@ export interface ExpertDefineRequest {
 
 export interface ExpertTool {
   name: string;
+  label?: string;
   description: string;
   category: string;
   requires_approval: boolean;

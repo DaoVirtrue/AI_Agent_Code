@@ -16,7 +16,7 @@ export function ChatPage() {
   const setBreadcrumbs = useAppStore((s) => s.setBreadcrumbs);
 
   useEffect(() => {
-    setBreadcrumbs([{ title: '对话' }]);
+    setBreadcrumbs([{ title: 'AI 工作台' }]);
   }, [setBreadcrumbs]);
 
   const handleSend = useCallback(

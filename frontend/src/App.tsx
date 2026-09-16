@@ -22,7 +22,6 @@ const PromptsPage = lazy(() => import('@/pages/PromptsPage').then(m => ({ defaul
 const GatewayPage = lazy(() => import('@/pages/GatewayPage').then(m => ({ default: m.GatewayPage })));
 const MCPPage = lazy(() => import('@/pages/MCPPage').then(m => ({ default: m.MCPPage })));
 const EvalPage = lazy(() => import('@/pages/EvalPage').then(m => ({ default: m.EvalPage })));
-const DocGenPage = lazy(() => import('@/pages/DocGenPage').then(m => ({ default: m.DocGenPage })));
 const ExpertPage = lazy(() => import('@/pages/ExpertPage').then(m => ({ default: m.ExpertPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
@@ -44,7 +43,6 @@ export default function App() {
           <Route path="/gateway" element={<SuspenseWrapper><GatewayPage /></SuspenseWrapper>} />
           <Route path="/mcp" element={<SuspenseWrapper><MCPPage /></SuspenseWrapper>} />
           <Route path="/eval" element={<SuspenseWrapper><EvalPage /></SuspenseWrapper>} />
-          <Route path="/docs" element={<SuspenseWrapper><DocGenPage /></SuspenseWrapper>} />
           <Route path="/experts" element={<SuspenseWrapper><ExpertPage /></SuspenseWrapper>} />
           <Route path="/admin/*" element={
             <RouteGuard requiredRole="admin">

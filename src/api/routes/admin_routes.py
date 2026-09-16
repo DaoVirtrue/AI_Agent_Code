@@ -333,7 +333,7 @@ async def get_usage_report(
 
     where_clause = " AND ".join(conditions)
 
-    # Aggregate usage
+    # Aggregate usage (request_logs 是真实的请求日志表)
     result = await db.execute(
         text(f"""
             SELECT
@@ -342,10 +342,9 @@ async def get_usage_report(
                 model,
                 SUM(input_tokens) as total_input_tokens,
                 SUM(output_tokens) as total_output_tokens,
-                SUM(total_tokens) as total_tokens,
                 SUM(cost_usd) as total_cost_usd,
                 COUNT(*) as request_count
-            FROM usage_records
+            FROM request_logs
             WHERE {where_clause}
             GROUP BY tenant_id, provider, model
             ORDER BY total_cost_usd DESC
@@ -359,20 +358,23 @@ async def get_usage_report(
     total_requests = 0
 
     for row in result:
+        input_tokens = int(row.total_input_tokens or 0)
+        output_tokens = int(row.total_output_tokens or 0)
+        total = input_tokens + output_tokens
         entry = {
             "tenant_id": row.tenant_id,
             "provider": row.provider,
             "model": row.model,
-            "input_tokens": int(row.total_input_tokens),
-            "output_tokens": int(row.total_output_tokens),
-            "total_tokens": int(row.total_tokens),
-            "cost_usd": float(row.total_cost_usd),
-            "request_count": int(row.request_count),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total,
+            "cost_usd": float(row.total_cost_usd or 0),
+            "request_count": int(row.request_count or 0),
         }
         breakdown.append(entry)
-        total_tokens_sum += int(row.total_tokens)
-        total_cost_sum += float(row.total_cost_usd)
-        total_requests += int(row.request_count)
+        total_tokens_sum += total
+        total_cost_sum += float(row.total_cost_usd or 0)
+        total_requests += int(row.request_count or 0)
 
     return {
         "period": period,

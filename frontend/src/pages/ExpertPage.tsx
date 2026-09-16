@@ -84,10 +84,13 @@ export function ExpertPage() {
     }
   };
 
+  // 技能名 -> 中文 label（优先用后端返回的 label，否则原样显示）
+  const toolLabel = (name: string) => tools.find(t => t.name === name)?.label || name;
+
   const columns = [
     { title: '名称', dataIndex: 'name', key: 'name', render: (t: string) => <Text strong>{t}</Text> },
     { title: '角色', dataIndex: 'role', key: 'role', ellipsis: true },
-    { title: '技能', dataIndex: 'skills', key: 'skills', render: (s: string[]) => s?.length ? s.map(k => <Tag key={k} color="blue">{k}</Tag>) : <Text type="secondary">-</Text> },
+    { title: '技能', dataIndex: 'skills', key: 'skills', render: (s: string[]) => s?.length ? s.map(k => <Tag key={k} color="blue">{toolLabel(k)}</Tag>) : <Text type="secondary">-</Text> },
     { title: '知识库', dataIndex: 'knowledge_bases', key: 'knowledge_bases', render: (k: string[]) => k?.length ? k.map(b => <Tag key={b} color="green">{b}</Tag>) : <Text type="secondary">-</Text> },
     { title: '操作', key: 'actions', render: (_: any, record: any) => (
       <Button type="primary" size="small" icon={<ThunderboltOutlined />} loading={running === record.name} onClick={() => handleRun(record.name)}>运行</Button>
@@ -158,7 +161,7 @@ export function ExpertPage() {
           <div>
             <Text strong className="block mb-1">可调用技能 / MCP 工具</Text>
             <Select mode="multiple" className="w-full" value={formSkills} onChange={setFormSkills}
-              placeholder="选择技能" options={tools.map(t => ({ value: t.name, label: `${t.name}${t.requires_approval ? ' (需授权)' : ''}` }))} />
+              placeholder="选择技能" options={tools.map(t => ({ value: t.name, label: `${t.label || t.name}${t.requires_approval ? '（需授权）' : ''}` }))} />
           </div>
           <div>
             <Text strong className="block mb-1">专属知识库</Text>

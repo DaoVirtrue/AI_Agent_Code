@@ -33,7 +33,7 @@ function getItem(
 
 const menuItems: MenuItem[] = [
   getItem('仪表盘', '/dashboard', <DashboardOutlined />),
-  getItem('对话', '/chat', <MessageOutlined />),
+  getItem('AI 工作台', '/chat', <MessageOutlined />),
   getItem('RAG 知识库', '/rag', <DatabaseOutlined />),
   getItem('Agent 控制台', '/agent', <RobotOutlined />),
   getItem('智能体专家', '/experts', <UserOutlined />),
@@ -41,7 +41,6 @@ const menuItems: MenuItem[] = [
   getItem('网关监控', '/gateway', <ApiOutlined />),
   getItem('MCP 管理', '/mcp', <LinkOutlined />),
   getItem('质量评测', '/eval', <ExperimentOutlined />),
-  getItem('文档生成', '/docs', <FileTextOutlined />),
   getItem('系统管理', '/admin', <SettingOutlined />, [
     getItem('概览', '/admin', <AppstoreOutlined />),
     getItem('租户管理', '/admin/tenants', <TeamOutlined />),
