@@ -28,14 +28,17 @@ RUN pip install --no-cache-dir --default-timeout=120 \
     pytest>=8.0 pytest-asyncio>=0.24 python-multipart>=0.0.18 \
     sse-starlette>=2.0 aiofiles>=24.0
 
-# Batch 2: LLM/AI deps (core + sentence-transformers for BGE-M3 embeddings)
-# NOTE: chromadb / pymilvus / FlagEmbedding / dspy / pdfplumber / python-docx
-# are lazily imported with graceful fallbacks, so they are NOT in the base image.
+# Batch 2: LLM/AI deps (core)
+# NOTE: sentence-transformers (torch) is a ~2GB download that stalls on slow
+# networks. The RAG pipeline gracefully falls back to a hash embedder when it
+# is absent. For the full BGE semantic-retrieval path, run the backend from the
+# local .venv (which already has sentence-transformers installed), or install
+# it on-demand inside the container.
 RUN pip install --no-cache-dir --default-timeout=120 \
     langchain>=0.3 langgraph>=0.2 langchain-openai>=0.3 langchain-community>=0.3 \
     openai>=1.60 anthropic>=0.40 \
     tiktoken>=0.8 sentencepiece>=0.2 huggingface-hub>=0.26 \
-    sentence-transformers>=3.3 numpy scipy
+    numpy scipy
 
 # Batch 3: Document generation/processing (light, pure-Python)
 # docx/xlsx/pptx for the document-download feature; pdfplumber for PDF upload.
