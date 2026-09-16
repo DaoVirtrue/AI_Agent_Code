@@ -158,10 +158,20 @@ async def _init_agent_executor(app: FastAPI):
         WebSearchTool,
         CalculatorTool,
         WebFetchTool,
+        DatabaseQueryTool,
+        FileOperationsTool,
+        CodeExecutorTool,
     )
 
     tool_registry = ToolRegistry()
-    for tool in (WebSearchTool(), CalculatorTool(), WebFetchTool()):
+    for tool in (
+        WebSearchTool(),
+        CalculatorTool(),
+        WebFetchTool(),
+        DatabaseQueryTool(),
+        FileOperationsTool(),
+        CodeExecutorTool(),
+    ):
         try:
             tool_registry.register(tool)
         except Exception as exc:  # noqa: BLE001 - resilient startup
@@ -185,6 +195,13 @@ async def _init_permission_store(app: FastAPI):
 
     app.state.permission_store = PermissionStore()
     logger.info("Permission store initialized")
+
+
+async def _init_seed_examples(app: FastAPI):
+    """Seed demo skills / experts / RAG docs / MCP servers (idempotent)."""
+    from src.services.seed_examples import seed_examples
+
+    await seed_examples(app)
 
 
 async def _init_mcp_tools(app: FastAPI):
@@ -232,6 +249,20 @@ async def _init_mcp_tools(app: FastAPI):
         approval_gate=approval_gate,
         rag_pipeline=getattr(app.state, "rag_pipeline", None),
     )
+
+    # MCP pool: unified interface for mcp_routes (list/connect/tools/call).
+    from src.mcp.pool import MCPPool
+
+    pool = MCPPool(tools_by_name=tools_by_name)
+    pool.register_server(
+        name="llm-platform",
+        url="builtin://llm-platform",
+        transport="builtin",
+        description="平台内置工具：命令行 / 文档生成 / 图片 OCR / 计算 / 数据库查询 / 文件操作",
+        tools=["cli.execute", "document.generate", "document.ocr", "calculator", "database_query", "file_operations"],
+        status="connected",
+    )
+    app.state.mcp_pool = pool
     logger.info("MCP tools initialized: %s", list(tools_by_name.keys()))
 
 
@@ -334,6 +365,7 @@ async def lifespan(app: FastAPI):
     await _try_init("mcp_tools", _init_mcp_tools(app))
     await _try_init("skill_store", _init_skill_store(app))
     await _try_init("permission_store", _init_permission_store(app))
+    await _try_init("seed_examples", _init_seed_examples(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield

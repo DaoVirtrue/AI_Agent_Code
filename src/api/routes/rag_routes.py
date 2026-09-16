@@ -300,6 +300,51 @@ async def rag_search(
 
 
 @router.post(
+    "/retrieve",
+    response_model=dict,
+    responses={200: {"description": "仅检索（不生成），返回相关文档块"}},
+)
+async def rag_retrieve(
+    request: RAGQueryRequest,
+    tenant: TenantContext = Depends(get_current_tenant),
+    pipeline=Depends(get_rag_pipeline),
+):
+    """仅执行检索，返回相关文档块（不调用 LLM 生成）。
+
+    供 AI 工作台在对话前拉取真实向量库上下文，把具体知识库/来源传给对话模型。
+    """
+    start = time.monotonic()
+    retrieval_result = await pipeline.retrieve(
+        query=request.query,
+        top_k=request.top_k,
+        strategy=request.retrieval_strategy,
+        filters=request.filters,
+        tenant_id=tenant.tenant_id,
+    )
+    if request.rerank and retrieval_result.chunks:
+        retrieval_result = await pipeline.rerank(
+            query=request.query,
+            chunks=retrieval_result.chunks,
+            model=request.rerank_model,
+        )
+    return {
+        "sources": [
+            SourceDoc(
+                document_id=c.document_id,
+                chunk_id=c.chunk_id,
+                content=c.content,
+                score=c.score,
+                metadata=getattr(c, 'metadata', {}),
+                source_type=getattr(c, 'source_type', 'unknown'),
+                retrieval_strategy=request.retrieval_strategy,
+            ).model_dump()
+            for c in retrieval_result.chunks
+        ],
+        "latency_ms": round((time.monotonic() - start) * 1000, 2),
+    }
+
+
+@router.post(
     "/chat",
     response_model=RAGQueryResponse,
     responses={200: {"description": "带对话上下文的 RAG 对话"}},
@@ -421,6 +466,20 @@ async def cache_stats(
     """获取 RAG 缓存统计数据，包括命中率和缓存大小。"""
     stats = await pipeline.get_cache_stats(tenant_id=tenant.tenant_id)
     return stats
+
+
+@router.get(
+    "/knowledge-bases",
+    response_model=dict,
+    responses={200: {"description": "知识库列表（用于前端选择）"}},
+)
+async def list_knowledge_bases(
+    tenant: TenantContext = Depends(get_current_tenant),
+    pipeline=Depends(get_rag_pipeline),
+):
+    """列出当前租户可用的知识库（含文档数），供工作台选择具体知识库检索。"""
+    bases = await pipeline.list_knowledge_bases(tenant_id=tenant.tenant_id)
+    return {"items": bases, "total": len(bases)}
 
 
 @router.get(

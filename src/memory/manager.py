@@ -310,8 +310,8 @@ class MemoryManager:
     def clear_all(self) -> None:
         """Clear all memory stores. Use with caution."""
         self.short_term.clear()
-        # LTM and episodic clear must be done carefully
-        self.short_term.clear()
+        self.long_term.clear()
+        self.episodic.clear()
 
     def get_stats(self) -> dict:
         """Return statistics from all memory stores."""

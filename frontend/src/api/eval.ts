@@ -17,6 +17,22 @@ export interface EvalResult {
   overall_score: number;
   num_queries: number;
   run_id?: string;
+  per_query?: EvalPerQuery[];
+}
+
+export interface EvalPerQuery {
+  query: string;
+  generated_answer: string;
+  retrieved_contexts: string[];
+  expected_answer?: string | null;
+  scores: {
+    faithfulness: number;
+    answer_relevancy: number;
+    context_precision: number;
+    context_recall: number;
+    answer_correctness?: number | null;
+    overall: number;
+  };
 }
 
 export async function runEvaluation(request: EvalRequest): Promise<EvalResult> {

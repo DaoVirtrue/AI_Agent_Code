@@ -103,7 +103,7 @@ llm-platform/
 │   ├── nginx/nginx.conf        #   /api → app:8000 反向代理
 │   └── src/                    #   React 页面 + 组件 + Zustand stores
 │
-├── src/                        # 十层架构 + 三大体系（见 docs/架构说明.md）
+├── src/                        # 十层架构 + 三大体系（见 docs/面试/架构说明.md）
 │   ├── core/                   # 最底层 — 异常体系 + 工具契约 + 共享类型
 │   ├── api/                    # API 层 — FastAPI 路由 + 依赖注入
 │   ├── agents/                 # Agent 层 — ReAct/PEV + 7编排 + 工具 + 通信

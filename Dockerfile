@@ -9,10 +9,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_RETRIES=5
 
 # Replace apt sources with Aliyun mirrors for faster downloads in China
+# libgl1 + libxcb* 是 opencv-python（RapidOCR 依赖）在 slim 镜像里的运行时系统库。
 RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         curl libpq-dev ca-certificates \
+        libgl1 libglib2.0-0 libxcb1 libxcb-render0 libxcb-shape0 libxcb-xfixes0 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -44,6 +46,12 @@ RUN pip install --no-cache-dir --default-timeout=120 \
 # docx/xlsx/pptx for the document-download feature; pdfplumber for PDF upload.
 RUN pip install --no-cache-dir --default-timeout=120 \
     python-docx openpyxl python-pptx pdfplumber
+
+# Batch 4: OCR (RapidOCR ONNX — no tesseract binary needed, works offline).
+# rapidocr-onnxruntime pulls opencv-python (non-headless), which needs X11
+# system libs (libxcb/libgl1) that are installed above in the apt step.
+RUN pip install --no-cache-dir --default-timeout=180 \
+    rapidocr-onnxruntime onnxruntime
 
 COPY pyproject.toml README.md ./
 COPY config ./config

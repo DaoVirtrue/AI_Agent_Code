@@ -199,12 +199,14 @@ class RAGASWrapper:
         Decomposes the answer into atomic claims and checks each against contexts.
         """
         if not contexts:
-            return 1.0  # Nothing to be unfaithful to
+            # No retrieved context to ground the answer against — faithfulness
+            # is undefined rather than perfect.
+            return 0.0
 
         # Decompose answer into sentences (proxy for claims)
         claims = self._extract_claims(answer)
         if not claims:
-            return 1.0
+            return 0.0
 
         context_text = " ".join(contexts).lower()
         supported_count = 0

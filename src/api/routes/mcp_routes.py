@@ -167,6 +167,10 @@ async def list_mcp_servers(
         return []
 
     servers = await mcp_pool.get_servers(tenant_id=tenant.tenant_id)
+    # get_servers 返回 dict 列表（MCPPool），已是可序列化结构，直接返回。
+    if servers and isinstance(servers[0], dict):
+        return servers
+    # 兼容旧的「对象」实现（MCPRegistry 等），转成 dict。
     return [
         {
             "name": s.name,

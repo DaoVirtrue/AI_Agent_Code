@@ -21,6 +21,22 @@ export async function listDocuments(): Promise<any> {
   return response.data;
 }
 
+export async function listKnowledgeBases(): Promise<{ items: { name: string; documents: number }[]; total: number }> {
+  const response = await client.get('/v1/rag/knowledge-bases');
+  return response.data;
+}
+
+export async function retrieveChunks(query: string, filters?: Record<string, string>, topK = 5): Promise<{ sources: any[] }> {
+  const response = await client.post('/v1/rag/retrieve', {
+    query,
+    top_k: topK,
+    retrieval_strategy: 'hybrid',
+    filters,
+    rerank: true,
+  });
+  return response.data;
+}
+
 export async function deleteDocument(documentId: string): Promise<any> {
   const response = await client.delete(`/v1/rag/documents/${documentId}`);
   return response.data;

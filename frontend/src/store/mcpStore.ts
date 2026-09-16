@@ -1,34 +1,27 @@
 import { create } from 'zustand';
-import { listMCPServers } from '@/api/mcp';
+import { listMCPServers, listMCPTools, connectMCPServer, disconnectMCPServer, callMCPTool, type MCPToolDef } from '@/api/mcp';
 
 interface MCPServerItem {
   id: string; name: string; transport: string;
   status: 'connected' | 'disconnected' | 'error';
   toolCount: number;
-  command?: string; args?: string; description?: string;
-  tools?: string[]; env?: Record<string, string>;
-}
-
-interface MCPToolItem {
-  name: string;
-  server: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
+  url?: string; description?: string;
+  tools?: any[]; env?: Record<string, string>;
 }
 
 interface MCPState {
   servers: MCPServerItem[];
   serversLoading: boolean;
-  tools: MCPToolItem[];
+  tools: MCPToolDef[];
   toolsLoading: boolean;
   testResult: string | null;
   testLoading: boolean;
   error: string | null;
 
   fetchServers: () => Promise<void>;
-  connectServer: (name: string) => Promise<void>;
+  fetchTools: (serverName?: string) => Promise<void>;
+  connectServer: (name: string, url?: string) => Promise<void>;
   disconnectServer: (name: string) => Promise<void>;
-  fetchTools: () => Promise<void>;
   testTool: (serverName: string, toolName: string, params: Record<string, unknown>) => Promise<void>;
   clearTestResult: () => void;
   clearError: () => void;
@@ -48,12 +41,13 @@ export const useMCPStore = create<MCPState>((set, get) => ({
     try {
       const servers = await listMCPServers();
       const mapped: MCPServerItem[] = (Array.isArray(servers) ? servers : []).map((s: any) => ({
-        id: s.id || s.name || 'unknown',
-        name: s.name || s.id || 'unknown',
+        id: s.name || 'unknown',
+        name: s.name || 'unknown',
         transport: s.transport || 'stdio',
         status: (s.status === 'connected' ? 'connected' : 'disconnected') as any,
-        toolCount: (s.tools || []).length,
+        toolCount: s.tools_count ?? (s.tools || []).length,
         tools: s.tools || [],
+        url: s.url || '',
         description: s.description || '',
       }));
       set({ servers: mapped, serversLoading: false });
@@ -63,17 +57,22 @@ export const useMCPStore = create<MCPState>((set, get) => ({
     }
   },
 
-  connectServer: async (name: string) => {
+  fetchTools: async (serverName?: string) => {
+    set({ toolsLoading: true, error: null });
+    try {
+      const { tools } = await listMCPTools(serverName);
+      set({ tools: tools || [], toolsLoading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch tools';
+      set({ error: message, toolsLoading: false });
+    }
+  },
+
+  connectServer: async (name: string, url?: string) => {
     set({ error: null });
     try {
-      await import('@/api/client').then(({ default: client }) =>
-        client.post(`/v1/mcp/servers/connect`, { server_name: name })
-      );
-      set((s) => ({
-        servers: s.servers.map((srv) =>
-          srv.name === name ? { ...srv, status: 'connected' as const } : srv
-        ),
-      }));
+      await connectMCPServer({ name, url: url || '', transport: 'builtin' });
+      await get().fetchServers();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to connect server';
       set({ error: message });
@@ -83,41 +82,19 @@ export const useMCPStore = create<MCPState>((set, get) => ({
   disconnectServer: async (name: string) => {
     set({ error: null });
     try {
-      await import('@/api/client').then(({ default: client }) =>
-        client.post(`/v1/mcp/servers/disconnect`, { server_name: name })
-      );
-      set((s) => ({
-        servers: s.servers.map((srv) =>
-          srv.name === name ? { ...srv, status: 'disconnected' as const } : srv
-        ),
-      }));
+      await disconnectMCPServer(name);
+      await get().fetchServers();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to disconnect server';
       set({ error: message });
     }
   },
 
-  fetchTools: async () => {
-    set({ toolsLoading: true, error: null });
-    try {
-      const { default: client } = await import('@/api/client');
-      const response = await client.post('/v1/mcp/tools/list');
-      const tools: MCPToolItem[] = Array.isArray(response.data) ? response.data : [];
-      set({ tools, toolsLoading: false });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch tools';
-      set({ error: message, toolsLoading: false });
-    }
-  },
-
   testTool: async (serverName, toolName, params) => {
     set({ testLoading: true, testResult: null, error: null });
     try {
-      const { default: client } = await import('@/api/client');
-      const response = await client.post('/v1/mcp/tools/call', params, {
-        params: { server_name: serverName, tool_name: toolName },
-      });
-      set({ testResult: JSON.stringify(response.data, null, 2), testLoading: false });
+      const response = await callMCPTool(serverName, toolName, params);
+      set({ testResult: JSON.stringify(response, null, 2), testLoading: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Tool test failed';
       set({ error: message, testLoading: false });

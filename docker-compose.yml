@@ -149,6 +149,14 @@ services:
       - app_uploads:/app/uploads
       - app_cache:/app/cache
     command: celery -A src.infrastructure.broker:celery_app worker --loglevel=info --concurrency=4 --max-tasks-per-child=100
+    # Worker 不监听 HTTP 端口，不能用 Dockerfile 里 curl localhost:8000 的检查；
+    # 改用 celery inspect ping（经 broker 探活 worker 是否响应）。
+    healthcheck:
+      test: ["CMD", "celery", "-A", "src.infrastructure.broker:celery_app", "inspect", "ping", "-t", "5"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - llm-platform-net
     logging: *default-logging

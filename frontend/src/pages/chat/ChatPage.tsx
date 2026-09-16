@@ -4,7 +4,7 @@ import 'allotment/dist/style.css';
 import { useChatStore, useAppStore } from '@/store';
 import { ConversationList } from './ConversationList';
 import { ChatMessages } from './ChatMessages';
-import { ChatInput } from './ChatInput';
+import { ChatInput, type SendOptions } from './ChatInput';
 import { ContextPanel } from './ContextPanel';
 import { Empty } from 'antd';
 import { MessageOutlined } from '@ant-design/icons';
@@ -20,9 +20,9 @@ export function ChatPage() {
   }, [setBreadcrumbs]);
 
   const handleSend = useCallback(
-    async (content: string, model: string, expertName?: string) => {
+    async (opts: SendOptions) => {
       const store = useChatStore.getState();
-      await store.sendMessage(content, model || 'deepseek-chat', expertName);
+      await store.sendMessage(opts.content, opts);
     },
     []
   );

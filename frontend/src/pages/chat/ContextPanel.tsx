@@ -26,8 +26,18 @@ export function ContextPanel() {
   }, [activeId, activeConversation?.messages?.length]);
 
   const lastUserMsg = activeConversation?.messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
+  // 优先展示本次对话真实检索到的引用来源（后端向量库返回）；
+  // 没有真实来源时退回旧的前端关键词打分（兼容历史会话）。
   const sources = (() => {
-    // Always compute from localStorage for accurate real-time scoring
+    const real = activeConversation?.sources || [];
+    if (real.length > 0) {
+      return real.map((s: any) => ({
+        chunk_id: s.chunk_id,
+        document_name: s.document_name || s.metadata?.filename || '',
+        content: s.content || '',
+        score: s.score ?? 0,
+      }));
+    }
     try {
       const docs = JSON.parse(localStorage.getItem('llm_platform_rag_documents') || '[]');
       const kw = lastUserMsg.split(/[\s,，。！？、；：]+/).flatMap((k: string) => {

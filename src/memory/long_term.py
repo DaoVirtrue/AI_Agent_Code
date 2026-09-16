@@ -394,6 +394,12 @@ class LongTermMemory:
         """Return all unique tags in the store."""
         return sorted(self._tags_index.keys())
 
+    def clear(self) -> None:
+        """Remove all memories from the store (and the vector store, if any)."""
+        self._memories.clear()
+        self._tags_index.clear()
+        self._total_memories = 0
+
     @property
     def count(self) -> int:
         """Total number of stored memories."""

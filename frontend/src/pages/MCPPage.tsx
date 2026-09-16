@@ -1,135 +1,104 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Drawer, Input, Form, Typography, Space, Tag, Empty, Spin, message } from 'antd';
-import { PlusOutlined, LinkOutlined, ToolOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Drawer, Form, Input, Typography, Space, Tag, Empty, Spin, message, Tabs, Tooltip, Alert } from 'antd';
+import { PlusOutlined, LinkOutlined, ToolOutlined, ReloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useAppStore, useMCPStore } from '@/store';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import type { MCPToolDef } from '@/api/mcp';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 export function MCPPage() {
   const setBreadcrumbs = useAppStore((s) => s.setBreadcrumbs);
-  const storeServers = useMCPStore((s) => s.servers);
-  const { connectServer, disconnectServer, fetchServers } = useMCPStore();
-  const [servers, setServers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    servers, serversLoading, tools, toolsLoading, testResult, testLoading,
+    fetchServers, fetchTools, connectServer, disconnectServer, testTool, clearTestResult,
+  } = useMCPStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testTarget, setTestTarget] = useState<MCPToolDef | null>(null);
   const [form] = Form.useForm();
+  const [testForm] = Form.useForm();
 
   useEffect(() => {
     setBreadcrumbs([{ title: 'MCP' }]);
+    fetchServers();
+    fetchTools();
   }, [setBreadcrumbs]);
 
-  useEffect(() => { fetchServers(); }, []);
-  useEffect(() => { setServers(storeServers); setLoading(false); }, [storeServers]);
-  const handleConnect = (name: string) => { connectServer(name); };
-  const handleDisconnect = (name: string) => { disconnectServer(name); };
-
-  const handleAddServer = () => {
-    form.resetFields();
-    setDrawerOpen(true);
-  };
-
-  const handleSubmit = () => {
-    form.validateFields().then((values) => {
-      const args = values.args ? values.args.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-      const env: Record<string, string> = {};
-      if (values.env) {
-        values.env.split('\n').forEach((line: string) => {
-          const [key, ...rest] = line.split('=');
-          if (key && rest.length > 0) {
-            env[key.trim()] = rest.join('=').trim();
-          }
-        });
-      }
-      // In production, call API to create server
-      const newServer: MCPServer = {
-        id: `mcp_${Date.now()}`,
-        name: values.name,
-        command: values.command,
-        args,
-        env,
-        status: 'connected',
-        tools: [],
-      };
-      setServers((prev) => [...prev, newServer]);
+  const handleAddServer = async () => {
+    const values = await form.validateFields();
+    try {
+      await connectServer(values.name, values.url);
+      message.success(`MCP 服务器「${values.name}」已添加`);
       setDrawerOpen(false);
-      message.success('MCP 服务器已添加');
-    });
+      form.resetFields();
+    } catch (e: any) {
+      message.error('添加失败: ' + (e?.message || '未知错误'));
+    }
   };
 
-  const columns = [
+  const openTest = (tool: MCPToolDef) => {
+    setTestTarget(tool);
+    testForm.resetFields();
+    clearTestResult();
+    setTestOpen(true);
+  };
+
+  const handleTest = async () => {
+    if (!testTarget) return;
+    const params = (await testForm.validateFields()).args ? JSON.parse((await testForm.validateFields()).args) : {};
+    await testTool(testTarget.server_name, testTarget.name, params);
+  };
+
+  const serverColumns = [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string) => <Text strong>{text}</Text>,
+      title: '名称', dataIndex: 'name', key: 'name',
+      render: (t: string) => <Text strong>{t}</Text>,
     },
     {
-      title: '命令',
-      dataIndex: 'command',
-      key: 'command',
-      render: (text: string) => <Tag className="!font-mono !text-xs">{text}</Tag>,
+      title: '传输', dataIndex: 'transport', key: 'transport',
+      render: (t: string) => <Tag className="!font-mono !text-xs">{t}</Tag>,
     },
     {
-      title: '参数',
-      dataIndex: 'args',
-      key: 'args',
-      render: (args: string[]) => (
-        <Space size={[2, 2]} wrap>
-          {args?.map((a) => <Tag key={a} className="!text-xs">{a}</Tag>) || '-'}
-        </Space>
-      ),
+      title: '说明', dataIndex: 'description', key: 'description', ellipsis: true,
+      render: (t: string) => <Text type="secondary">{t || '-'}</Text>,
     },
     {
-      title: '环境变量',
-      key: 'env',
-      render: (_: any, record: MCPServer) => (
-        <Text>{Object.keys(record.env || {}).length} 个变量</Text>
-      ),
+      title: '工具数', dataIndex: 'toolCount', key: 'toolCount',
+      render: (v: number) => <Tag color="blue">{v ?? 0}</Tag>,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: '状态', dataIndex: 'status', key: 'status',
       render: (status: string) => <StatusBadge status={status as any} />,
     },
     {
-      title: '工具',
-      dataIndex: 'tools',
-      key: 'tools',
-      render: (tools: string[]) => (
-        <Space size={[2, 2]} wrap>
-          {tools?.map((t) => <Tag key={t} color="blue" className="!text-xs">{t}</Tag>) || (
-            <Text type="secondary" className="text-xs">未暴露工具</Text>
-          )}
-        </Space>
+      title: '操作', key: 'actions',
+      render: (_: any, record: any) => (
+        <Button size="small" type="link" danger onClick={() => { disconnectServer(record.name); message.success(`已断开 ${record.name}`); }}>
+          断开
+        </Button>
       ),
     },
+  ];
+
+  const toolColumns = [
     {
-      title: '操作',
-      key: 'actions',
-      render: (_: any, record: MCPServer) => (
-        <Space>
-          <Button
-            size="small"
-            type="link"
-            onClick={() => message.success(`${record.name} 已重启`)}
-          >
-            重启
-          </Button>
-          <Button
-            size="small"
-            type="link"
-            danger
-            onClick={() => {
-              setServers((prev) => prev.filter((s) => s.id !== record.id));
-              message.success(`${record.name} 已移除`);
-            }}
-          >
-            移除
-          </Button>
-        </Space>
+      title: '工具名', dataIndex: 'name', key: 'name',
+      render: (t: string) => <Text strong className="font-mono">{t}</Text>,
+    },
+    {
+      title: '所属服务器', dataIndex: 'server_name', key: 'server_name',
+      render: (t: string) => <Tag color="geekblue">{t}</Tag>,
+    },
+    {
+      title: '说明', dataIndex: 'description', key: 'description', ellipsis: true,
+      render: (t: string) => <Text type="secondary">{t || '-'}</Text>,
+    },
+    {
+      title: '操作', key: 'actions',
+      render: (_: any, record: MCPToolDef) => (
+        <Button size="small" icon={<PlayCircleOutlined />} onClick={() => openTest(record)}>测试调用</Button>
       ),
     },
   ];
@@ -138,69 +107,94 @@ export function MCPPage() {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <Title level={4} className="!mb-0">MCP 服务器</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddServer} className="!rounded-lg">
-          添加服务器
-        </Button>
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={() => { fetchServers(); fetchTools(); }}>刷新</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setDrawerOpen(true)} className="!rounded-lg">
+            添加服务器
+          </Button>
+        </Space>
       </div>
 
       <Text type="secondary" className="block text-sm">
-        MCP (Model Context Protocol) 让 LLM 安全访问外部工具和数据源。在此管理 MCP 服务器连接。
+        MCP (Model Context Protocol) 让 LLM 安全访问外部工具和数据源。下方列出平台已连接的 MCP 服务器及暴露的工具，可在 AI 工作台选择启用。
       </Text>
 
-      <Card>
-        {loading ? (
-          <div className="flex justify-center py-12"><Spin size="large" /></div>
-        ) : servers.length === 0 ? (
-          <div className="py-12">
-            <Empty
-              image={<LinkOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
-              description={
-                <div>
-                  <Text type="secondary">未配置 MCP 服务器</Text>
-                  <br />
-                  <Button type="link" onClick={handleAddServer} className="!mt-2">
-                    添加您的第一个 MCP 服务器
-                  </Button>
-                </div>
-              }
-            />
-          </div>
-        ) : (
-          <Table
-            dataSource={servers}
-            columns={columns}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-            scroll={{ x: 900 }}
-          />
-        )}
-      </Card>
+      <Tabs
+        items={[
+          {
+            key: 'servers',
+            label: <span><LinkOutlined /> 服务器</span>,
+            children: (
+              <Card>
+                {serversLoading ? (
+                  <div className="flex justify-center py-12"><Spin size="large" /></div>
+                ) : servers.length === 0 ? (
+                  <Empty description="未配置 MCP 服务器，点击右上角「添加服务器」" />
+                ) : (
+                  <Table dataSource={servers} columns={serverColumns} rowKey="id" pagination={false} scroll={{ x: 720 }} />
+                )}
+              </Card>
+            ),
+          },
+          {
+            key: 'tools',
+            label: <span><ToolOutlined /> 工具</span>,
+            children: (
+              <Card>
+                {toolsLoading ? (
+                  <div className="flex justify-center py-12"><Spin size="large" /></div>
+                ) : tools.length === 0 ? (
+                  <Empty description="暂无工具，连接 MCP 服务器后自动发现工具" />
+                ) : (
+                  <Table dataSource={tools} columns={toolColumns} rowKey={(r: any) => `${r.server_name}:${r.name}`} pagination={{ pageSize: 10 }} scroll={{ x: 720 }} />
+                )}
+              </Card>
+            ),
+          },
+        ]}
+      />
 
       <Drawer
         title="添加 MCP 服务器"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        width={480}
-        extra={
-          <Button type="primary" onClick={handleSubmit}>
-            添加服务器
-          </Button>
-        }
+        width={440}
+        extra={<Button type="primary" onClick={handleAddServer}>添加</Button>}
       >
+        <Alert type="info" showIcon className="mb-3" message="示例：文件系统 / 网络工具，输入名称与地址即可注册" />
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="服务器名称" rules={[{ required: true, message: '名称为必填项' }]}>
-            <Input placeholder="例如：文件系统服务器" />
+            <Input placeholder="例如：文件系统" />
           </Form.Item>
-          <Form.Item name="command" label="命令" rules={[{ required: true, message: '命令为必填项' }]}>
-            <Input placeholder="例如：npx 或 python" />
-          </Form.Item>
-          <Form.Item name="args" label="参数" help="以逗号分隔的参数列表">
-            <Input placeholder="例如：-y, @modelcontextprotocol/server-filesystem, /path" />
-          </Form.Item>
-          <Form.Item name="env" label="环境变量" help="每行一个：KEY=VALUE">
-            <TextArea rows={4} placeholder="API_KEY=sk-...\nDEBUG=true" className="!font-mono" />
+          <Form.Item name="url" label="地址" rules={[{ required: true, message: '地址为必填项' }]}>
+            <Input placeholder="例如：sse://filesystem 或 stdio://web" />
           </Form.Item>
         </Form>
+      </Drawer>
+
+      <Drawer
+        title={`测试调用：${testTarget?.name || ''}`}
+        open={testOpen}
+        onClose={() => setTestOpen(false)}
+        width={560}
+        extra={<Button type="primary" onClick={handleTest} loading={testLoading}>执行</Button>}
+      >
+        {testTarget && (
+          <div className="space-y-4">
+            <Text type="secondary">{testTarget.description || '无描述'}</Text>
+            <Form form={testForm} layout="vertical">
+              <Form.Item name="args" label="参数 (JSON)" initialValue="{}">
+                <TextArea rows={5} placeholder='例如 {"query": "SELECT 1"}' className="!font-mono" />
+              </Form.Item>
+            </Form>
+            {testResult && (
+              <div>
+                <Text strong className="block mb-1">返回结果</Text>
+                <pre className="bg-gray-900 text-green-300 rounded-lg p-3 text-xs overflow-auto max-h-64 whitespace-pre-wrap">{testResult}</pre>
+              </div>
+            )}
+          </div>
+        )}
       </Drawer>
     </div>
   );

@@ -70,7 +70,4 @@ coverage.xml
 
 # 面试准备材料(不公开)
 计划.md
-docs/亿级演进蓝图.md
-docs/架构说明.md
-docs/面试文档.md
-docs/面试技术深度讲解.md
+docs/面试/

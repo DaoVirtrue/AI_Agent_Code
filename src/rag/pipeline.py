@@ -178,6 +178,8 @@ class RAGPipeline:
             "chunks_count": len(chunks),
             "tenant_id": tenant_id,
             "content_hash": content_hash,
+            "knowledge_base": (metadata or {}).get("knowledge_base", "default"),
+            "metadata": metadata or {},
             "indexed_at": time.time(),
         }
 
@@ -209,26 +211,44 @@ class RAGPipeline:
         """
         start = time.perf_counter()
 
-        query_embedding = await self.embedder.embed_query(query)
-        results = await self.vector_store.search(query_embedding, top_k=top_k, filters=filters)
+        # When filters are present (e.g. knowledge_base), fetch extra candidates
+        # first and filter AFTER ranking — the store filters post-top-k, which
+        # would otherwise under-return when other collections rank higher.
+        candidate_k = top_k
+        if filters:
+            candidate_k = min(top_k * 50, 10000)
 
-        chunks = [
-            RetrievalChunk(
+        query_embedding = await self.embedder.embed_query(query)
+        results = await self.vector_store.search(query_embedding, top_k=candidate_k, filters=None)
+
+        chunks = []
+        for doc in results:
+            if filters and not self._matches_filters(doc.metadata, filters):
+                continue
+            chunks.append(RetrievalChunk(
                 document_id=doc.metadata.get("document_id", ""),
                 chunk_id=doc.id,
                 content=doc.text,
                 score=float(doc.score),
                 metadata=doc.metadata,
                 source_type=doc.metadata.get("source_type", "unknown"),
-            )
-            for doc in results
-        ]
+            ))
+            if len(chunks) >= top_k:
+                break
 
         return RetrievalResult(
             chunks=chunks,
             query=query,
             latency_ms=(time.perf_counter() - start) * 1000,
         )
+
+    @staticmethod
+    def _matches_filters(metadata: dict, filters: dict) -> bool:
+        """Check equality filters against a chunk's metadata."""
+        for key, value in filters.items():
+            if metadata.get(key) != value:
+                return False
+        return True
 
     async def rerank(
         self,
@@ -376,6 +396,16 @@ class RAGPipeline:
         items = docs[start:start + page_size]
         return {"items": items, "total": total, "page": page, "page_size": page_size}
 
+    async def list_knowledge_bases(self, tenant_id: str = "default") -> list[dict]:
+        """Return distinct knowledge bases for the tenant, with doc counts."""
+        counts: dict[str, int] = {}
+        for d in self._documents.values():
+            if d.get("tenant_id") != tenant_id:
+                continue
+            kb = d.get("knowledge_base") or "default"
+            counts[kb] = counts.get(kb, 0) + 1
+        return [{"name": kb, "documents": counts[kb]} for kb in sorted(counts)]
+
     async def delete_document(self, document_id: str, tenant_id: str = "default") -> bool:
         if document_id not in self._documents:
             return False
@@ -430,6 +460,24 @@ class RAGPipeline:
             ground_truths=expected_answers,
         )
 
+        # Per-query detail (for the frontend to render a human-comparable view).
+        per_query = []
+        for i, (q, a, ctx, r) in enumerate(zip(questions, answers, contexts_list, results)):
+            per_query.append({
+                "query": q,
+                "generated_answer": a,
+                "retrieved_contexts": ctx,
+                "expected_answer": expected_answers[i] if expected_answers and i < len(expected_answers) else None,
+                "scores": {
+                    "faithfulness": r.faithfulness,
+                    "answer_relevancy": r.answer_relevancy,
+                    "context_precision": r.context_precision,
+                    "context_recall": r.context_recall,
+                    "answer_correctness": r.answer_correctness,
+                    "overall": r.overall,
+                },
+            })
+
         # Aggregate across the batch
         n = len(results) or 1
         return {
@@ -443,6 +491,7 @@ class RAGPipeline:
             ),
             "overall_score": sum(r.overall for r in results) / n,
             "num_queries": len(queries),
+            "per_query": per_query,
         }
 
     # ------------------------------------------------------------------

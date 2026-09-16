@@ -51,12 +51,31 @@ class OCRService:
     def __init__(self, vision_llm: Any = None, use_tesseract: bool = True):
         self.vision_llm = vision_llm
         self.use_tesseract = use_tesseract
+        self._rapidocr = None
 
     async def extract(self, image_bytes: bytes, filename: str = "image") -> OCRResult:
         """Extract text and metadata from an image."""
         info = self._image_info(image_bytes)
 
-        # Try tesseract first (local, deterministic)
+        # Try RapidOCR first (ONNX, local, no tesseract binary needed)
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+
+            engine = getattr(self, "_rapidocr", None)
+            if engine is None:
+                engine = RapidOCR()
+                self._rapidocr = engine
+            result, _ = engine(image_bytes)
+            if result:
+                text = "\n".join(r[1] for r in result if r[1])
+                if text.strip():
+                    return OCRResult(text=text.strip(), image_info=info, engine="rapidocr")
+        except ImportError:
+            logger.debug("rapidocr not installed")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("rapidocr OCR failed: %s", exc)
+
+        # Try tesseract (local, deterministic)
         if self.use_tesseract:
             try:
                 import pytesseract  # type: ignore
@@ -130,7 +149,16 @@ class OCRService:
                 tesseract = True
             except ImportError:
                 tesseract = False
+
+        rapidocr = False
+        try:
+            import rapidocr_onnxruntime  # noqa: F401
+            rapidocr = True
+        except ImportError:
+            rapidocr = False
+
         return {
+            "rapidocr": rapidocr,
             "tesseract": tesseract,
             "vision_llm": self.vision_llm is not None,
         }

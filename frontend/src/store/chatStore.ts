@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { getBestChunks, searchDocuments } from '@/utils/ragSearch';
 import { syncMemory } from '@/api/chat';
 import type { SourceDoc, AgentStep, TokenUsage, MessageDict } from '@/types';
 
@@ -16,6 +15,13 @@ export interface Conversation {
   createdAt: string; updatedAt: string; sources?: SourceDoc[]; agentSteps?: AgentStep[];
 }
 
+export interface SendMessageOptions {
+  model?: string;
+  expertName?: string;
+  ragKbs?: string[];
+  mcpServers?: string[];
+}
+
 interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -23,7 +29,7 @@ interface ChatState {
   createConversation: (title?: string, model?: string) => string;
   deleteConversation: (id: string) => void;
   setActiveConversation: (id: string) => void;
-  sendMessage: (content: string, model?: string, expertName?: string) => Promise<void>;
+  sendMessage: (content: string, opts?: SendMessageOptions) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>()(persist((set, get) => ({
@@ -41,7 +47,8 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
   }),
   setActiveConversation: (id) => set({ activeConversationId: id, error: null }),
 
-  sendMessage: async (content, model, expertName?) => {
+  sendMessage: async (content, opts) => {
+    const { model, expertName, ragKbs, mcpServers } = opts || {};
     const state = get();
     if (state.isStreaming || !content.trim()) return;
     let conv = state.conversations.find(c => c.id === state.activeConversationId);
@@ -84,19 +91,43 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
         return;
       }
 
-      // RAG search with TF-IDF scoring
-      const ragDocs = (() => { try { return JSON.parse(localStorage.getItem('llm_platform_rag_documents') || '[]'); } catch { return []; } })();
+      // RAG context from selected knowledge bases (real backend vector retrieval)
       let ragContext = '';
-      if (ragDocs.length > 0) {
-        const bestChunks = getBestChunks(content, ragDocs, 3);
-        if (bestChunks.length > 0) {
-          ragContext = '\n\n【知识库参考内容】\n' + bestChunks.map((c: string, i: number) => `[文档片段${i+1}] ${c.substring(0, 500)}...`).join('\n\n') + '\n请基于以上参考内容回答用户问题。';
+      let sources: any[] = [];
+      if (ragKbs && ragKbs.length > 0) {
+        try {
+          const { retrieveChunks } = await import('@/api/rag');
+          const seen = new Set<string>();
+          for (const kb of ragKbs) {
+            const res = await retrieveChunks(content.trim(), { knowledge_base: kb }, 4);
+            for (const s of res.sources || []) {
+              const key = s.chunk_id || s.content?.slice(0, 40);
+              if (seen.has(key)) continue;
+              seen.add(key);
+              ragContext += `\n[${s.metadata?.filename || s.document_id}] ${s.content}\n`;
+              sources.push({
+                chunk_id: s.chunk_id,
+                document_name: s.metadata?.filename || s.document_id || '',
+                content: s.content,
+                score: s.score,
+              });
+            }
+          }
+          if (ragContext) {
+            ragContext = '\n\n【知识库参考内容】\n' + ragContext + '请基于以上参考内容回答用户问题。';
+          }
+        } catch (e) {
+          console.warn('RAG retrieve failed', e);
         }
-        console.log('RAG: found', bestChunks.length, 'chunks from', ragDocs.length, 'docs');
       }
 
+      // MCP context note (tool execution happens in 智能体专家)
+      const mcpContext = (mcpServers && mcpServers.length)
+        ? `\n\n【本次会话选择的 MCP 服务器】${mcpServers.join('、')}。这些服务器暴露的工具可在「智能体专家」中绑定并执行。`
+        : '';
+
       const apiMessages = [
-        { role: 'system', content: '你是AI助手。对于复杂问题请用格式：\n## 思考\n(推理)\n## 回答\n(结论)\n简单问题直接答。' + ragContext },
+        { role: 'system', content: '你是AI助手。对于复杂问题请用格式：\n## 思考\n(推理)\n## 回答\n(结论)\n简单问题直接答。' + ragContext + mcpContext },
         ...updatedMessages.filter(m => m.content && m.content.trim()).map(m => ({ role: m.role, content: m.content })),
       ];
       // 单次流式调用：返回完整文本 + finish_reason（用于检测是否被截断）
@@ -172,31 +203,6 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
 
       // Sync assistant reply to backend conversation memory.
       syncMemory(convId, 'assistant', reply).catch(() => {});
-
-      // Search real RAG document chunks for sources
-      const sources: SourceDoc[] = (() => {
-        try {
-          const docs: any[] = JSON.parse(localStorage.getItem('llm_platform_rag_documents') || '[]');
-          const kw = content.split(/[\s,，。！？、；：]+/).filter((k: string) => k.length > 0).map((k: string) => k.toLowerCase());
-          if (docs.length === 0 || kw.length === 0) return [];
-          const hits: any[] = [];
-          docs.forEach((doc: any) => {
-            (doc.chunks || []).forEach((chunk: string, idx: number) => {
-              const lower = chunk.toLowerCase();
-              let matches = 0;
-              kw.forEach((k: string) => { if (lower.includes(k)) matches++; });
-              const score = matches / kw.length;
-              if (score > 0) hits.push({ doc, chunk, idx, score });
-            });
-          });
-          return hits.sort((a, b) => b.score - a.score).slice(0, 5).map(h => ({
-            chunk_id: `${h.doc.document_id}_${h.idx}`,
-            document_name: h.doc.filename,
-            content: h.chunk.substring(0, 300),
-            score: h.score,
-          }));
-        } catch { return []; }
-      })();
 
       // Parse thinking steps from response
       const steps: AgentStep[] = [];
