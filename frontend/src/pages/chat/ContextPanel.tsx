@@ -1,17 +1,29 @@
+import { useEffect, useState } from 'react';
 import { Tabs, List, Timeline, Tag, Descriptions, Empty, Typography } from 'antd';
 const { Text } = Typography;
 import {
   FileTextOutlined,
   NodeIndexOutlined,
   DollarOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useChatStore } from '@/store';
 import { formatNumber, formatCurrency } from '@/utils/format';
+import { getMemoryState } from '@/api/chat';
 
 export function ContextPanel() {
   const conversations = useChatStore((s) => s.conversations);
   const activeId = useChatStore((s) => s.activeConversationId);
   const activeConversation = conversations.find(c => c.id === activeId);
+  const [memoryState, setMemoryState] = useState<any>(null);
+
+  // Fetch backend memory state whenever the conversation changes or messages update
+  useEffect(() => {
+    if (!activeId) return;
+    let cancelled = false;
+    getMemoryState(activeId).then((s) => { if (!cancelled) setMemoryState(s); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeId, activeConversation?.messages?.length]);
 
   const lastUserMsg = activeConversation?.messages?.filter((m: any) => m.role === 'user').pop()?.content || '';
   const sources = (() => {
@@ -144,6 +156,43 @@ export function ContextPanel() {
               <Descriptions.Item label="总费用 (USD)"><span className="font-semibold text-green-600">${(((tokenUsage.prompt_tokens||0) * 0.27 + (tokenUsage.completion_tokens||0) * 1.10) / 1000000).toFixed(6)}</span></Descriptions.Item>
               <Descriptions.Item label="模型"><span className="text-xs">{lastMessage?.model || 'DeepSeek V4'}</span></Descriptions.Item>
             </Descriptions>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'memory',
+      label: (
+        <span className="flex items-center gap-1">
+          <DatabaseOutlined />
+          记忆
+        </span>
+      ),
+      children: (
+        <div className="p-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+          {!memoryState ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="发送消息后，这里显示记忆状态" className="mt-8" />
+          ) : (
+            <div className="space-y-3">
+              <Descriptions column={1} size="small" bordered colon={false}>
+                <Descriptions.Item label="STM 消息数">{memoryState.stm_messages?.length || 0}</Descriptions.Item>
+                <Descriptions.Item label="STM Token">{memoryState.stm_token_count || 0}</Descriptions.Item>
+                <Descriptions.Item label="已压缩">
+                  {memoryState.compressed ? <Tag color="orange">是（关键信息已存摘要）</Tag> : <Tag color="green">否</Tag>}
+                </Descriptions.Item>
+              </Descriptions>
+              {memoryState.summary && (
+                <div>
+                  <Text strong className="text-sm">压缩摘要（LTM）：</Text>
+                  <div className="mt-1 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                    <Text className="text-xs whitespace-pre-wrap">{memoryState.summary}</Text>
+                  </div>
+                </div>
+              )}
+              <Text type="secondary" className="text-xs block">
+                上下文超限时，旧对话会压缩成摘要（而非丢弃），关键事实得以保留。
+              </Text>
+            </div>
           )}
         </div>
       ),

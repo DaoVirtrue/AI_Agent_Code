@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getBestChunks, searchDocuments } from '@/utils/ragSearch';
+import { syncMemory } from '@/api/chat';
 import type { SourceDoc, AgentStep, TokenUsage, MessageDict } from '@/types';
 
 const DEFAULT_MODEL = 'deepseek-chat';
@@ -57,6 +58,9 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
       conversations: s.conversations.map(c => c.id === convId ? { ...c, messages: updatedMessages, model: requestModel, title: c.messages.length === 0 ? content.trim().slice(0, 30) : c.title, updatedAt: new Date().toISOString() } : c),
       isStreaming: true, isLoading: false, error: null,
     }));
+
+    // Sync user message to backend conversation memory (STM + compression).
+    syncMemory(convId, 'user', content.trim()).catch(() => {});
 
     try {
       // RAG search with TF-IDF scoring
@@ -117,6 +121,9 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
         }
       }
       if (!reply) reply = '(无回复)';
+
+      // Sync assistant reply to backend conversation memory.
+      syncMemory(convId, 'assistant', reply).catch(() => {});
 
       // Search real RAG document chunks for sources
       const sources: SourceDoc[] = (() => {

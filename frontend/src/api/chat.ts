@@ -11,6 +11,20 @@ export async function sendChatMessage(
   return response.data;
 }
 
+export async function syncMemory(conversationId: string, role: string, content: string): Promise<any> {
+  const response = await client.post('/v1/chat/memory/sync', {
+    conversation_id: conversationId,
+    role,
+    content,
+  });
+  return response.data;
+}
+
+export async function getMemoryState(conversationId: string): Promise<any> {
+  const response = await client.get(`/v1/chat/memory/${conversationId}`);
+  return response.data;
+}
+
 export async function sendChatMessageStream(
   request: ChatRequest,
   onChunk: (text: string) => void,

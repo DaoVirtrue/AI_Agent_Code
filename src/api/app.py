@@ -403,6 +403,31 @@ def create_app(settings=None) -> FastAPI:
             return {"error": "memory not initialized"}
         return memory.get_state(conversation_id).to_dict()
 
+    # Sync-only endpoint: record a message into conversation memory WITHOUT
+    # generating a reply. Used by the streaming chat frontend to keep the
+    # backend memory (STM + compression) in sync while the LLM reply is
+    # streamed through the existing /v1/chat/completions endpoint.
+    class MemorySyncRequest(PydanticBase):
+        conversation_id: str = "default"
+        role: str = "user"  # user | assistant
+        content: str = ""
+
+    @app.post("/v1/chat/memory/sync")
+    async def sync_memory(req: MemorySyncRequest):
+        memory: "ConversationMemory" = getattr(app.state, "conversation_memory", None)
+        if not memory:
+            raise HTTPException(503, "memory not initialized")
+
+        memory.add_message(req.conversation_id, req.role, req.content)
+        # Trigger compression check (async) so key facts are summarized before
+        # the next turn rather than silently dropped.
+        await memory.build_context(req.conversation_id)
+
+        return {
+            "conversation_id": req.conversation_id,
+            "memory_state": memory.get_state(req.conversation_id).to_dict(),
+        }
+
     @app.post("/v1/rag/parse")
     async def parse_document(file: UploadFile):
         """解析 PDF/DOCX 文件为文本"""
