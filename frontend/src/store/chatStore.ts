@@ -23,7 +23,7 @@ interface ChatState {
   createConversation: (title?: string, model?: string) => string;
   deleteConversation: (id: string) => void;
   setActiveConversation: (id: string) => void;
-  sendMessage: (content: string, model?: string) => Promise<void>;
+  sendMessage: (content: string, model?: string, expertName?: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>()(persist((set, get) => ({
@@ -41,7 +41,7 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
   }),
   setActiveConversation: (id) => set({ activeConversationId: id, error: null }),
 
-  sendMessage: async (content, model) => {
+  sendMessage: async (content, model, expertName?) => {
     const state = get();
     if (state.isStreaming || !content.trim()) return;
     let conv = state.conversations.find(c => c.id === state.activeConversationId);
@@ -63,6 +63,27 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
     syncMemory(convId, 'user', content.trim()).catch(() => {});
 
     try {
+      // 指定专家 -> 走专家运行端点（带专属知识库+技能+MCP）
+      if (expertName) {
+        const { runExpert } = await import('@/api/experts');
+        const expertResult = await runExpert(expertName, content.trim());
+        const reply = expertResult.output || '(无回复)';
+        set(s => ({
+          conversations: s.conversations.map(c => {
+            if (c.id !== convId) return c;
+            const msgs = [...c.messages]; const last = msgs[msgs.length - 1];
+            if (last?.role === 'assistant') {
+              last.content = reply;
+              last.tokenUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+            }
+            return { ...c, messages: msgs, updatedAt: new Date().toISOString() };
+          }),
+          isStreaming: false,
+        }));
+        syncMemory(convId, 'assistant', reply).catch(() => {});
+        return;
+      }
+
       // RAG search with TF-IDF scoring
       const ragDocs = (() => { try { return JSON.parse(localStorage.getItem('llm_platform_rag_documents') || '[]'); } catch { return []; } })();
       let ragContext = '';

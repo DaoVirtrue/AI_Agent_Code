@@ -1,20 +1,27 @@
-import { useState, useCallback, KeyboardEvent } from 'react';
+import { useState, useCallback, KeyboardEvent, useEffect } from 'react';
 import { Input, Select, Button, Space } from 'antd';
 import { SendOutlined, ClearOutlined } from '@ant-design/icons';
 import { useChatStore } from '@/store';
 import { MODEL_OPTIONS, DEFAULT_MODEL } from '@/utils/constants';
+import { listExperts } from '@/api/experts';
 
 const { TextArea } = Input;
 
 interface ChatInputProps {
-  onSend: (content: string, model: string) => Promise<void>;
+  onSend: (content: string, model: string, expertName?: string) => Promise<void>;
 }
 
 export function ChatInput({ onSend }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [model, setModel] = useState(DEFAULT_MODEL);
+  const [expert, setExpert] = useState<string | undefined>(undefined);
+  const [experts, setExperts] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   const isStreaming = useChatStore((s) => s.isStreaming);
+
+  useEffect(() => {
+    listExperts().then(r => setExperts(r.items || [])).catch(() => {});
+  }, []);
 
   const handleSend = useCallback(async () => {
     const trimmed = message.trim();
@@ -22,14 +29,14 @@ export function ChatInput({ onSend }: ChatInputProps) {
 
     setIsSending(true);
     try {
-      await onSend(trimmed, model);
+      await onSend(trimmed, model, expert);
       setMessage('');
     } catch {
       // Error handled by store
     } finally {
       setIsSending(false);
     }
-  }, [message, model, isSending, isStreaming, onSend]);
+  }, [message, model, expert, isSending, isStreaming, onSend]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -71,6 +78,19 @@ export function ChatInput({ onSend }: ChatInputProps) {
             (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ||
             (option?.value as string)?.toLowerCase().includes(input.toLowerCase())
           }
+        />
+        <Select
+          value={expert}
+          onChange={setExpert}
+          size="small"
+          className="w-40"
+          placeholder="选择专家"
+          allowClear
+          options={[
+            { value: '', label: '通用助手' },
+            ...experts.map((e: any) => ({ value: e.name, label: e.name })),
+          ]}
+          disabled={isLoading}
         />
         <span className="text-xs text-gray-400 hidden sm:inline">
           Ctrl+Enter 发送

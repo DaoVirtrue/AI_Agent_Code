@@ -20,9 +20,9 @@ export function ChatPage() {
   }, [setBreadcrumbs]);
 
   const handleSend = useCallback(
-    async (content: string, model: string) => {
+    async (content: string, model: string, expertName?: string) => {
       const store = useChatStore.getState();
-      await store.sendMessage(content, model || 'deepseek-chat');
+      await store.sendMessage(content, model || 'deepseek-chat', expertName);
     },
     []
   );

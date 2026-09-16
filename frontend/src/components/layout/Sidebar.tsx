@@ -14,6 +14,7 @@ import {
   KeyOutlined,
   AppstoreOutlined,
   ExperimentOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '@/store';
@@ -35,6 +36,7 @@ const menuItems: MenuItem[] = [
   getItem('对话', '/chat', <MessageOutlined />),
   getItem('RAG 知识库', '/rag', <DatabaseOutlined />),
   getItem('Agent 控制台', '/agent', <RobotOutlined />),
+  getItem('智能体专家', '/experts', <UserOutlined />),
   getItem('Prompt 工程', '/prompts', <FileTextOutlined />),
   getItem('网关监控', '/gateway', <ApiOutlined />),
   getItem('MCP 管理', '/mcp', <LinkOutlined />),
