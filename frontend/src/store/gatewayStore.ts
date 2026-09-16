@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ModelInfo } from '@/types';
+import { listModels, getProviderHealth } from '@/api/gateway';
 
 interface ProviderState {
   name: string;
@@ -46,29 +47,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   fetchModels: async () => {
     set({ isLoading: true, error: null });
     try {
-      // MOCK: Return DeepSeek models with real pricing
-      const models: ModelInfo[] = [
-        {
-          id: 'deepseek-chat',
-          name: 'DeepSeek Chat',
-          provider: 'DeepSeek',
-          max_tokens: 131072,
-          supports_streaming: true,
-          supports_tools: true,
-          cost_per_1k_input: 0.00027,
-          cost_per_1k_output: 0.0011,
-        },
-        {
-          id: 'deepseek-reasoner',
-          name: 'DeepSeek Reasoner',
-          provider: 'DeepSeek',
-          max_tokens: 65536,
-          supports_streaming: true,
-          supports_tools: false,
-          cost_per_1k_input: 0.00055,
-          cost_per_1k_output: 0.00219,
-        },
-      ];
+      const models = await listModels();
       set({ models, isLoading: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch models';
@@ -79,20 +58,18 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   fetchProviders: async () => {
     set({ error: null });
     try {
-      // MOCK: Show only DeepSeek as the configured provider
-      const providers: ProviderState[] = [
-        {
-          name: 'DeepSeek',
-          status: 'healthy',
-          latencyP50: 185,
-          latencyP99: 320,
-          uptime: 99.9,
-          circuitState: 'CLOSED',
-          failureCount: 0,
-          lastTransitionTime: new Date().toISOString(),
-          modelCount: 2,
-        },
-      ];
+      const health = await getProviderHealth();
+      const providers: ProviderState[] = (Array.isArray(health) ? health : []).map((h: any, i: number) => ({
+        name: h.provider || `provider-${i}`,
+        status: (h.status as any) || 'unknown',
+        latencyP50: h.latency || 0,
+        latencyP99: h.latency || 0,
+        uptime: 99.9,
+        circuitState: 'CLOSED',
+        failureCount: 0,
+        lastTransitionTime: new Date().toISOString(),
+        modelCount: 0,
+      }));
       set({ providers });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch providers';

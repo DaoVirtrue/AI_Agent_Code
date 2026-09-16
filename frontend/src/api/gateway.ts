@@ -9,7 +9,7 @@ export interface ProviderHealth {
 }
 
 export async function listModels(): Promise<ModelInfo[]> {
-  const response = await client.get<ModelInfo[]>('/v1/models');
+  const response = await client.get<ModelInfo[]>('/v1/gateway/models');
   return response.data;
 }
 

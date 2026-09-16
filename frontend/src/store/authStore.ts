@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { User } from '@/types';
 import { setToken, removeToken, getToken, isTokenExpired } from '@/utils/token';
+import { login as loginApi } from '@/api/auth';
 
 // ---- Mock JWT token for demo (valid for 1 year) ----
 function makeMockJwt(): string {
@@ -42,19 +43,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (username: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      // MOCK: Accept any credentials for demo
       if (!username || !password) {
         throw new Error('请输入用户名和密码');
       }
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      // 真实登录：调用后端 /v1/auth/login，返回 demo API key
+      const response = await loginApi(username, password);
+      const accessToken = response.access_token || 'demo-jwt-token';
 
-      const accessToken = makeMockJwt();
       const user: User = {
         id: 'user_demo',
-        username,
-        role: 'admin',
+        username: response.username || username,
+        role: (response.role as any) || 'admin',
         tenant_id: 't_1',
       };
 

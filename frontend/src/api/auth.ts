@@ -12,35 +12,7 @@ export async function login(
   username: string,
   password: string
 ): Promise<LoginResponse> {
-  // Mock login for development — admin/admin works
-  if (username === 'admin' && password === 'admin') {
-    const user = {
-      id: 'usr_001',
-      username: 'admin',
-      role: 'admin' as const,
-      tenant_id: 'tenant_default',
-    };
-    const accessToken = createMockJwt({
-      sub: user.id,
-      username: user.username,
-      role: user.role,
-      tenant_id: user.tenant_id,
-    });
-    const refreshToken = createMockJwt({
-      sub: user.id,
-      type: 'refresh',
-      exp: Math.floor(Date.now() / 1000) + 604800,
-    });
-
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      token_type: 'bearer',
-      user,
-    };
-  }
-
-  // Real API call fallback
+  // 真实登录：调用后端 /v1/auth/login
   const request: LoginRequest = { username, password };
   const response = await client.post<LoginResponse>('/v1/auth/login', request);
   return response.data;

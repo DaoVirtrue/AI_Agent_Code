@@ -401,6 +401,12 @@ def create_app(settings=None) -> FastAPI:
     except Exception as e:
         logger.warning("Expert routes not loaded: %s", e)
 
+    try:
+        from src.api.routes.auth_routes import router as auth_router
+        app.include_router(auth_router)
+    except Exception as e:
+        logger.warning("Auth routes not loaded: %s", e)
+
     if settings:
         app.state.settings = settings
 
