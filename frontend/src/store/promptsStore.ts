@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { TemplateCreate, TemplateResponse, RenderResponse } from '@/types';
+import { listTemplates, renderPrompt, createTemplate } from '@/api/prompts';
 
 // ---- Mock template data ----
 const MOCK_TEMPLATES: TemplateResponse[] = [
@@ -99,11 +100,11 @@ export const usePromptsStore = create<PromptsState>((set, get) => ({
   fetchTemplates: async (params) => {
     set({ templatesLoading: true, error: null });
     try {
-      // MOCK: Return pre-built templates after a short delay
-      await sleep(300);
-      let filtered = [...MOCK_TEMPLATES];
+      const data = await listTemplates();
+      const templates: TemplateResponse[] = Array.isArray(data) ? data : (data as any)?.items || [];
+      let filtered = [...templates];
       if (params?.category) {
-        filtered = filtered.filter((t) => t.category === params.category);
+        filtered = filtered.filter((t) => (t as any).category === params.category);
       }
       if (params?.search) {
         const q = params.search.toLowerCase();
@@ -194,20 +195,13 @@ export const usePromptsStore = create<PromptsState>((set, get) => ({
   renderTemplate: async (templateId, variables) => {
     set({ renderLoading: true, error: null });
     try {
-      // MOCK: Render template locally using simple variable substitution
-      await sleep(200);
-      const template = get().templates.find((t) => t.id === templateId);
-      if (!template) {
-        throw new Error('Template not found');
-      }
-      let rendered = template.content;
-      for (const [key, value] of Object.entries(variables)) {
-        rendered = rendered.replace(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g'), value);
-      }
-      const tokenCount = Math.floor(rendered.length * 0.6);
+      const result = await renderPrompt({
+        template_name: templateId,
+        variables: variables as any,
+      } as any);
       set({
-        renderedOutput: rendered,
-        renderedTokens: tokenCount,
+        renderedOutput: result.rendered || '',
+        renderedTokens: result.token_count || 0,
         renderLoading: false,
       });
     } catch (err) {

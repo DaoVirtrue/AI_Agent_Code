@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getSystemStats, getUsageReport } from '@/api/admin';
 
 interface DashboardStats {
   totalTokens: number;
@@ -84,15 +85,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   fetchStats: async () => {
     set({ isLoading: true, error: null });
     try {
-      // MOCK: Simulate network delay then return realistic stats
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
+      const [statsData, usageData] = await Promise.all([getSystemStats(), getUsageReport()]);
+      const usageSummary = (usageData as any)?.summary || {};
       set({
         stats: {
-          totalTokens: 2450000 + Math.floor(Math.random() * 200000),
-          totalCost: Math.round((12.35 + Math.random() * 2) * 100) / 100,
+          totalTokens: usageSummary.total_tokens || 0,
+          totalCost: usageSummary.total_cost || 0,
           activeModels: 1,
-          healthStatus: 'healthy',
+          healthStatus: (statsData as any)?.status || 'healthy',
         },
         isLoading: false,
       });
@@ -106,8 +106,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   fetchTrend: async () => {
     set({ error: null });
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      set({ trend: generateMonthlyTrend(6) });
+      const usageData = await getUsageReport({ period: 'monthly' });
+      const trendData = (usageData as any)?.trend || [];
+      set({ trend: trendData });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to fetch trend data';
@@ -118,10 +119,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   fetchDistribution: async () => {
     set({ error: null });
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const usageData = await getUsageReport();
+      const breakdown = (usageData as any)?.breakdown || [];
       set({
-        distribution: generateDistribution(),
-        costTrend: generateCostTrend(6),
+        distribution: (Array.isArray(breakdown) ? breakdown : []).map((b: any) => ({
+          model: b.model || 'unknown',
+          tokens: b.tokens || 0,
+        })),
+        costTrend: [],
       });
     } catch (err) {
       const message =

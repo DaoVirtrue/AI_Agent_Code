@@ -1,15 +1,5 @@
 import { create } from 'zustand';
-
-// ---- Mock admin data ----
-const MOCK_TENANTS: Tenant[] = [
-  { id: 't_1', name: '默认租户', slug: 'default', tier: 'enterprise', isActive: true, createdAt: '2026-05-01T08:00:00Z', userCount: 128 },
-  { id: 't_2', name: '开发团队', slug: 'dev-team', tier: 'pro', isActive: true, createdAt: '2026-05-15T10:30:00Z', userCount: 45 },
-  { id: 't_3', name: '测试环境', slug: 'test-env', tier: 'free', isActive: true, createdAt: '2026-06-01T14:00:00Z', userCount: 8 },
-];
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { listTenants, getAuditLogs, getSystemStats, getUsageReport } from '@/api/admin';
 
 interface Tenant {
   id: string;
@@ -115,9 +105,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchTenants: async () => {
     set({ tenantsLoading: true, error: null });
     try {
-      // MOCK: Return pre-built tenants after a short delay
-      await sleep(300);
-      set({ tenants: [...MOCK_TENANTS], tenantsLoading: false });
+      const data = await listTenants();
+      const tenants: Tenant[] = (Array.isArray(data) ? data : (data as any)?.items || []).map((t: any) => ({
+        id: t.id || 'unknown',
+        name: t.name || 'unknown',
+        slug: t.slug || '',
+        tier: t.tier || 'free',
+        isActive: t.is_active ?? true,
+        createdAt: t.created_at || new Date().toISOString(),
+        userCount: t.user_count || 0,
+      }));
+      set({ tenants, tenantsLoading: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch tenants';
       set({ error: message, tenantsLoading: false });
@@ -166,28 +164,25 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchAuditLogs: async (params) => {
     set({ auditLoading: true, error: null });
     try {
-      await sleep(300);
       const page = (params?.page as number) || 1;
-      // MOCK: Generate realistic audit log entries
-      const baseTime = Date.now();
-      const audits: AuditEntry[] = [];
-      const actions = ['登录', '对话', '管理操作', 'API调用', '模型查询', '配置修改', '密钥生成', '用户管理'];
-      const users = ['admin', 'developer1', 'developer2', 'api-user'];
-      const tenants = ['默认租户', '开发团队', '测试环境'];
-      const statuses = ['success', 'success', 'success', 'success', 'failed', 'success', 'success', 'success'];
-
-      for (let i = 0; i < 8; i++) {
-        audits.push({
-          id: `audit_${page}_${i}`,
-          timestamp: new Date(baseTime - i * 3600000).toISOString(),
-          tenant: tenants[Math.floor(Math.random() * tenants.length)],
-          user: users[Math.floor(Math.random() * users.length)],
-          action: actions[Math.floor(Math.random() * actions.length)],
-          details: { method: 'POST', ip: '192.168.1.' + (100 + i), user_agent: 'Mozilla/5.0' },
-          status: statuses[Math.floor(Math.random() * statuses.length)],
-        });
-      }
-      set({ auditLogs: audits, auditTotal: 45, auditPage: page, auditPageSize: 10, auditLoading: false });
+      const data = await getAuditLogs({ page, pageSize: params?.pageSize as number || 10 });
+      const items = (data as any)?.items || (Array.isArray(data) ? data : []);
+      const audits: AuditEntry[] = items.map((a: any, i: number) => ({
+        id: a.id || `audit_${page}_${i}`,
+        timestamp: a.timestamp || a.created_at || new Date().toISOString(),
+        tenant: a.tenant || a.tenant_id || '-',
+        user: a.user || a.user_id || '-',
+        action: a.action || a.operation || '-',
+        details: a.details || {},
+        status: a.status || 'success',
+      }));
+      set({
+        auditLogs: audits,
+        auditTotal: (data as any)?.total || audits.length,
+        auditPage: page,
+        auditPageSize: (params?.pageSize as number) || 10,
+        auditLoading: false,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch audit logs';
       set({ error: message, auditLoading: false });
@@ -197,31 +192,22 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   fetchUsageReport: async () => {
     set({ usageLoading: true, error: null });
     try {
-      await sleep(300);
-      // MOCK: Generate realistic usage statistics
-      const today = new Date();
-      const dailyUsage: DailyUsage[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        dailyUsage.push({
-          date: d.toISOString().slice(0, 10),
-          calls: 1800 + Math.floor(Math.random() * 500),
-          tokens: 300000 + Math.floor(Math.random() * 120000),
-        });
-      }
-
+      const data = await getUsageReport();
+      const summary = (data as any)?.summary || {};
+      const breakdown = (data as any)?.breakdown || [];
       set({
         usageStats: {
-          totalCalls: 15200 + Math.floor(Math.random() * 300),
-          totalTokens: 2400000 + Math.floor(Math.random() * 200000),
-          totalCost: 8.15 + Math.random() * 1.5,
+          totalCalls: summary.total_calls || summary.calls || 0,
+          totalTokens: summary.total_tokens || summary.tokens || 0,
+          totalCost: summary.total_cost || summary.cost || 0,
         },
-        dailyUsage,
-        modelBreakdown: [
-          { model: 'deepseek-chat', calls: 12400, tokens: 1950000, cost: 6.8 },
-          { model: 'deepseek-reasoner', calls: 2600, tokens: 420000, cost: 1.35 },
-        ],
+        dailyUsage: [],
+        modelBreakdown: (Array.isArray(breakdown) ? breakdown : []).map((b: any) => ({
+          model: b.model || 'unknown',
+          calls: b.calls || 0,
+          tokens: b.tokens || 0,
+          cost: b.cost || 0,
+        })),
         usageLoading: false,
       });
     } catch (err) {

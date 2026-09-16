@@ -17,6 +17,16 @@ export async function getAuditLogs(params: { page?: number; pageSize?: number })
   items: any[];
   total: number;
 }> {
-  const response = await client.get('/v1/admin/audit', { params });
+  const response = await client.get('/v1/admin/audit-logs', { params });
+  return response.data;
+}
+
+export async function getSystemStats(): Promise<any> {
+  const response = await client.get('/v1/admin/system/stats');
+  return response.data;
+}
+
+export async function getUsageReport(params?: { period?: string }): Promise<any> {
+  const response = await client.get('/v1/admin/usage-report', { params });
   return response.data;
 }
