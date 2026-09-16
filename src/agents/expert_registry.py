@@ -24,10 +24,11 @@ class ExpertRegistry:
         approval_gate: ApprovalGate for requiring user approval on tool calls.
     """
 
-    def __init__(self, llm: Any = None, tools: Optional[dict] = None, approval_gate: Any = None):
+    def __init__(self, llm: Any = None, tools: Optional[dict] = None, approval_gate: Any = None, rag_pipeline: Any = None):
         self.llm = llm
         self.tools = tools or {}
         self.approval_gate = approval_gate
+        self.rag_pipeline = rag_pipeline
         self._experts: dict[tuple[str, str], BusinessExpert] = {}  # (tenant_id, name) -> expert
 
     def register(self, config: ExpertConfig, tenant_id: str = "default") -> BusinessExpert:
@@ -37,9 +38,10 @@ class ExpertRegistry:
             llm=self.llm,
             tools=self.tools,
             approval_gate=self.approval_gate,
+            rag_pipeline=self.rag_pipeline,
         )
         self._experts[(tenant_id, config.name)] = expert
-        logger.info("Defined expert '%s' (tenant=%s, skills=%s)", config.name, tenant_id, config.skills)
+        logger.info("Defined expert '%s' (tenant=%s, skills=%s, kb=%s)", config.name, tenant_id, config.skills, config.knowledge_bases)
         return expert
 
     def get(self, name: str, tenant_id: str = "default") -> Optional[BusinessExpert]:

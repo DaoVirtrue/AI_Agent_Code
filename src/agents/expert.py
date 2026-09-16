@@ -33,6 +33,9 @@ class ExpertConfig:
         role: Role description injected into the system prompt.
         system_prompt: Custom system prompt (prepended to the role).
         skills: List of tool names this expert may call (from the registry).
+        knowledge_bases: List of knowledge-base collection names this expert
+            may retrieve from (bound RAG). When non-empty, the expert first
+            retrieves relevant chunks from these collections before answering.
         description: Short description for the expert catalog.
     """
 
@@ -40,6 +43,7 @@ class ExpertConfig:
     role: str = ""
     system_prompt: str = ""
     skills: list[str] = field(default_factory=list)
+    knowledge_bases: list[str] = field(default_factory=list)
     description: str = ""
 
     def build_system_prompt(self) -> str:
@@ -48,6 +52,8 @@ class ExpertConfig:
             parts.append(self.system_prompt)
         if self.role:
             parts.append(f"你的角色：{self.role}")
+        if self.knowledge_bases:
+            parts.append(f"你可检索的专属知识库：{', '.join(self.knowledge_bases)}")
         parts.append("你可以使用提供的工具来完成用户的任务。")
         return "\n".join(parts)
 
@@ -80,11 +86,13 @@ class BusinessExpert:
         llm: Any = None,
         tools: Optional[dict[str, BaseTool]] = None,
         approval_gate: Any = None,
+        rag_pipeline: Any = None,
     ):
         self.config = config
         self.llm = llm
         self.tools = {name: tools[name] for name in (tools or {}) if name in config.skills} if config.skills else (tools or {})
         self.approval_gate = approval_gate
+        self.rag_pipeline = rag_pipeline
         self._max_steps = 15
 
     # ------------------------------------------------------------------
@@ -96,9 +104,19 @@ class BusinessExpert:
         if self.llm is None:
             return ExpertResult(output="专家未配置 LLM", status="error", error="no llm")
 
+        # Retrieve from bound knowledge bases (专属知识库) before answering
+        user_content = task
+        if self.config.knowledge_bases and self.rag_pipeline is not None:
+            rag_context = await self._retrieve_knowledge(task)
+            if rag_context:
+                user_content = (
+                    f"{task}\n\n【专属知识库参考内容】\n{rag_context}\n"
+                    f"请基于以上知识库内容回答。"
+                )
+
         messages = [
             {"role": "system", "content": self.config.build_system_prompt()},
-            {"role": "user", "content": task},
+            {"role": "user", "content": user_content},
         ]
 
         tool_calls_trace: list[dict] = []
@@ -222,6 +240,30 @@ class BusinessExpert:
                 msg["tool_calls"] = tool_calls
             return msg
         return {"role": "assistant", "content": getattr(response, "content", str(response))}
+
+    async def _retrieve_knowledge(self, task: str) -> str:
+        """Retrieve relevant chunks from the expert's bound knowledge bases.
+
+        Uses the RAG pipeline's retrieve() for each bound collection, returning
+        the concatenated top chunks as context.
+        """
+        try:
+            chunks = []
+            for kb in self.config.knowledge_bases:
+                result = await self.rag_pipeline.retrieve(
+                    query=task,
+                    top_k=3,
+                    strategy="hybrid",
+                    filters={"knowledge_base": kb} if kb != "default" else None,
+                    tenant_id="default",
+                )
+                for c in result.chunks:
+                    chunks.append(c.content[:500])
+            if chunks:
+                return "\n\n".join(f"[片段{i+1}] {c}" for i, c in enumerate(chunks[:6]))
+        except Exception as exc:  # noqa: BLE001 - knowledge retrieval is best-effort
+            logger.warning("Knowledge retrieval failed for expert '%s': %s", self.config.name, exc)
+        return ""
 
     def _build_tool_schemas(self) -> list[dict]:
         """Build OpenAI-compatible tool schemas for the bound tools."""

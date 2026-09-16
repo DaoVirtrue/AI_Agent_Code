@@ -15,12 +15,13 @@ router = APIRouter(prefix="/v1/experts", tags=["业务专家"])
 
 
 class ExpertDefineRequest(BaseModel):
-    """定义一个业务专家。"""
+    """定义一个业务专家（专属智能体）。"""
 
     name: str = Field(..., description="专家名称", min_length=1, max_length=100)
     role: str = Field("", description="角色描述")
     system_prompt: str = Field("", description="自定义系统提示词")
-    skills: list[str] = Field(default_factory=list, description="可调用的技能/工具名列表")
+    skills: list[str] = Field(default_factory=list, description="可调用的技能/MCP 工具名列表")
+    knowledge_bases: list[str] = Field(default_factory=list, description="绑定的专属知识库名列表")
     description: str = Field("", description="专家简介")
 
 
@@ -53,10 +54,11 @@ async def define_expert(
         role=request_body.role,
         system_prompt=request_body.system_prompt,
         skills=request_body.skills,
+        knowledge_bases=request_body.knowledge_bases,
         description=request_body.description,
     )
     registry.register(config, tenant_id=tenant.tenant_id)
-    return {"name": config.name, "status": "defined", "skills": config.skills}
+    return {"name": config.name, "status": "defined", "skills": config.skills, "knowledge_bases": config.knowledge_bases}
 
 
 @router.get("", response_model=dict)
@@ -68,6 +70,25 @@ async def list_experts(
     registry = http_request.app.state.expert_registry
     experts = registry.list_all(tenant_id=tenant.tenant_id)
     return {"items": experts, "total": len(experts)}
+
+
+@router.get("/available-tools", response_model=dict)
+async def list_available_tools(
+    http_request: Request,
+    tenant: TenantContext = Depends(get_current_tenant),
+):
+    """列出可绑定到专家的所有技能/MCP 工具。"""
+    registry = http_request.app.state.expert_registry
+    tools = []
+    for name, tool in registry.tools.items():
+        d = tool.definition
+        tools.append({
+            "name": name,
+            "description": d.description,
+            "category": d.category,
+            "requires_approval": d.requires_approval,
+        })
+    return {"tools": tools, "total": len(tools)}
 
 
 @router.post("/run", response_model=dict)

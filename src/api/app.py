@@ -214,6 +214,7 @@ async def _init_mcp_tools(app: FastAPI):
         llm=getattr(app.state, "llm", None),
         tools=tools_by_name,
         approval_gate=approval_gate,
+        rag_pipeline=getattr(app.state, "rag_pipeline", None),
     )
     logger.info("MCP tools initialized: %s", list(tools_by_name.keys()))
 
