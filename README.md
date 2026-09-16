@@ -16,14 +16,16 @@ docker compose up -d           # 一键启动全部 6 个服务
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| **🖥️ 前端 UI** | http://localhost:3000 | React 管理后台 + 对话界面 |
+| **🖥️ 前端 UI** | http://localhost:3001 | React 管理后台 + 对话界面 |
 | **API 应用** | http://localhost:8000 | FastAPI + Swagger 文档 |
 | PostgreSQL | 5432 | 关系型数据库 |
 | Redis | 6379 | 缓存 / 限流 |
 | RabbitMQ | 5672 / 15672 | 消息队列 / 管理面板 |
 | Celery Worker | — | 异步任务（RAG 摄入、评估） |
 
-**国内优化**：Dockerfile 已配置阿里云 apt 源 + 清华 pip 源，构建速度极快。
+**国内优化**：Dockerfile 已配置阿里云 apt 源 + pip 源，构建速度极快。
+
+**登录**：任意用户名密码即可登录（demo 模式，后端返回 `llm-demo-key`）。
 
 ---
 
@@ -75,15 +77,18 @@ docker compose up -d           # 一键启动全部 6 个服务
 
 | 页面 | 路由 | 功能 |
 |------|------|------|
-| **登录** | `/login` | tsparticles 粒子连线动画 + 毛玻璃登录卡片 |
-| **Dashboard** | `/dashboard` | 统计卡片 + Token 趋势图 + 模型分布饼图 |
-| **Chat** | `/chat` | 三栏可拖拽：对话列表 / SSE 流式对话 / RAG 来源 + Agent 步骤 |
-| **RAG** | `/rag` | 文档拖拽上传 + 知识库管理 + 检索测试 |
-| **Agent** | `/agent` | Agent 类型选择 + 执行日志逐步展开 (Thought→Action→Observation) |
-| **Prompts** | `/prompts` | Monaco 代码编辑器 + 变量测试 + AB 统计结果 |
-| **Gateway** | `/gateway` | Provider 健康卡片 + 熔断状态可视化 |
+| **登录** | `/login` | 粒子动画登录（真实后端 /v1/auth/login） |
+| **Dashboard** | `/dashboard` | 统计卡片 + Token 趋势 + 模型分布（真实 admin 端点） |
+| **Chat** | `/chat` | 三栏对话 + 专家选择 + 记忆压缩可视化 |
+| **RAG** | `/rag` | 文档上传 + 语义检索 + 知识库管理 |
+| **Agent** | `/agent` | Agent 执行日志逐步展开（真实 /v1/agent/run） |
+| **智能体专家** | `/experts` | 创建专属智能体（角色+提示词+技能+MCP+知识库）+ 审批 |
+| **质量评测** | `/eval` | RAGAS 五指标雷达图 + 历史趋势 |
+| **文档工具** | `/docs` | 文档生成下载（md/docx/xlsx/pptx）+ OCR 图片识别 |
+| **Prompts** | `/prompts` | Prompt 模板 + 变量测试 |
+| **Gateway** | `/gateway` | Provider 健康 + 熔断状态 |
 | **MCP** | `/mcp` | MCP Server 管理 + 工具目录 |
-| **Admin** | `/admin` | 租户/审计日志/用量报告/API Key 管理 |
+| **Admin** | `/admin` | 租户/审计日志/用量报告/API Key |
 
 ## 项目结构
 
@@ -118,7 +123,7 @@ llm-platform/
 │   ├── streaming/              # 流式层（自洽）— SSE/背压/安全扫描
 │   └── evaluation/             # 评测层（自洽）— 六维评估/迭代闭环
 │
-├── tests/                      # 139+ 测试用例
+├── tests/                      # 207 个测试（167 单元/集成/e2e + 40 API 冒烟）
 ├── config/                     # YAML 配置 + 模型注册表(14模型)
 ├── deploy/                     # K8s / Helm / Grafana 面板(40面板)
 └── alembic/                    # 数据库迁移
@@ -132,13 +137,17 @@ llm-platform/
 |------|------|
 | `GET /health` | 健康检查（DB/Redis/Provider 全量） |
 | `GET /docs` | Swagger API 文档 |
+| `POST /v1/auth/login` | 登录（demo 模式） |
 | `POST /v1/gateway/chat/completions` | OpenAI 兼容对话（多模型路由） |
 | `GET /v1/gateway/models` | 可用模型列表 |
 | `POST /v1/rag/search` | RAG 混合检索 |
-| `POST /v1/rag/chat` | RAG 对话 |
+| `POST /v1/rag/evaluate` | RAGAS 评测 |
 | `POST /v1/agent/run` | Agent 执行 |
-| `POST /v1/prompts/render` | Prompt 渲染 |
-| `POST /v1/prompts/experiments` | A/B 测试 |
+| `POST /v1/experts` | 定义业务专家（角色+技能+MCP+知识库） |
+| `POST /v1/experts/run` | 运行业务专家 |
+| `POST /v1/documents/generate` | 文档生成下载（md/docx/xlsx/pptx） |
+| `POST /v1/documents/ocr` | OCR 图片识别 |
+| `POST /v1/chat/memory` | 带记忆对话（压缩不丢关键信息） |
 
 ---
 
@@ -156,18 +165,19 @@ llm-platform/
 
 ## 验收标准
 
-- [x] `docker compose up -d` 一键部署全部 6 服务，前端 `:3000` + 后端 `:8000` 双端口
-- [x] 登录页 tsparticles 粒子连线动画 + JWT 认证
-- [x] Chat 页 SSE 流式逐字显示 + Markdown 渲染 + RAG 来源标注
+- [x] `docker compose up -d` 一键部署全部 6 服务，前端 `:3001` + 后端 `:8000` 双端口
+- [x] 登录（真实后端 /v1/auth/login）
+- [x] Chat 页 SSE 流式逐字显示 + Markdown 渲染 + 记忆压缩可视化
 - [x] 5+ 厂商模型路由 + 熔断 + 降级 + 限流
-- [x] Token 计数偏差 <2%（三编码器：tiktoken/sentencepiece/HF）
-- [x] 五区结构上下文窗口 + 三厂商 Prompt Caching（Anthropic/OpenAI/DeepSeek）
-- [x] A/B 测试 Welch's t-test + Cohen's d + Bonferroni
-- [x] CRAG + Self-RAG + Adaptive RAG + Graph RAG + Agentic RAG
-- [x] 4 种 Agent 模式 + 7 种多 Agent 编排
-- [x] MCP Server/Client stdio + SSE 双传输
-- [x] 五层记忆 + Ebbinghaus 遗忘曲线 + 记忆巩固引擎
-- [x] 4 层纵深防御 + 5 层注入防御 + PII 检测
+- [x] BGE-M3 语义检索（1024d，自动降级 bge-small-zh/hash）
+- [x] 4 种 Agent 模式 + PEV + 7 种多 Agent 编排
+- [x] 业务专家（角色+提示词+技能+MCP+专属知识库）
+- [x] MCP 工具化（CLI/文档/OCR）+ 每次授权机制
+- [x] RAGAS 评测（五指标 + 历史趋势）
+- [x] 文档生成下载（md/docx/xlsx/pptx）
+- [x] 五层记忆 + Ebbinghaus 遗忘曲线 + 上下文压缩不丢关键信息
+- [x] 分层超时/重试预算/断点恢复/资源 TTL（韧性专章）
+- [x] 207 个测试全绿（167 单元/集成/e2e + 40 API 冒烟）
 
 ---
 

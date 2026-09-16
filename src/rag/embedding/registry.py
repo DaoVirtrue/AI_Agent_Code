@@ -56,21 +56,55 @@ class LocalSentenceTransformer(BaseEmbedder):
         super().__init__(config)
         try:
             from sentence_transformers import SentenceTransformer
+
+            # Resolve the model path: prefer a local ModelScope/HF cache if the
+            # weights already exist, otherwise fall back to the HF repo id
+            # (which triggers a download).
+            model_path = self._resolve_model_path(config)
             self._model = SentenceTransformer(
-                config.model_path or config.name,
+                model_path,
                 trust_remote_code=True,
             )
             actual_dim = self._model.get_sentence_embedding_dimension()
             if actual_dim != config.dim:
                 logger.info("Model %s actual dim=%d (config=%d)", config.name, actual_dim, config.dim)
                 config.dim = actual_dim
-            logger.info("Loaded SentenceTransformer: %s (dim=%d)", config.name, config.dim)
+            logger.info("Loaded SentenceTransformer: %s (dim=%d, path=%s)", config.name, config.dim, model_path)
         except ImportError:
             logger.error("sentence-transformers not installed")
             self._model = None
         except Exception as e:
             logger.error("Failed to load model %s: %s", config.name, e)
             self._model = None
+
+    @staticmethod
+    def _resolve_model_path(config: EmbeddingModelConfig) -> str:
+        """Resolve a local model path from caches, else the HF repo id.
+
+        Checks (in order):
+          1. ModelScope cache: ~/.cache/modelscope/models/<repo>--<name>/snapshots/master
+          2. HF cache: ~/.cache/huggingface/hub/models--<repo>--<name>/snapshots/*/
+          3. The config.model_path (HF repo id, triggers download)
+        """
+        import os
+        from pathlib import Path
+
+        repo_id = config.model_path or config.name  # e.g. "BAAI/bge-m3"
+        repo_key = repo_id.replace("/", "--")
+
+        # ModelScope cache
+        ms_path = Path.home() / ".cache" / "modelscope" / "models" / f"{repo_key}" / "snapshots" / "master"
+        if ms_path.exists() and any(ms_path.iterdir()):
+            return str(ms_path)
+
+        # HF cache
+        hf_base = Path.home() / ".cache" / "huggingface" / "hub" / f"models--{repo_key}" / "snapshots"
+        if hf_base.exists():
+            snapshots = sorted([p for p in hf_base.iterdir() if p.is_dir()])
+            if snapshots:
+                return str(snapshots[-1])
+
+        return repo_id
 
     async def embed(self, texts: list[str]) -> np.ndarray:
         if self._model is None:
