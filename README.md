@@ -79,7 +79,7 @@ docker compose up -d           # 一键启动全部 6 个服务
 |------|------|------|
 | **登录** | `/login` | 粒子动画登录（真实后端 /v1/auth/login） |
 | **Dashboard** | `/dashboard` | 统计卡片 + Token 趋势 + 模型分布（真实 admin 端点） |
-| **Chat** | `/chat` | 三栏对话 + 专家选择 + 记忆压缩可视化 |
+| **Chat** | `/chat` | 三栏对话 + 专家选择 + 记忆压缩 + 长输出续写 + 代码复制/导出 |
 | **RAG** | `/rag` | 文档上传 + 语义检索 + 知识库管理 |
 | **Agent** | `/agent` | Agent 执行日志逐步展开（真实 /v1/agent/run） |
 | **智能体专家** | `/experts` | 创建专属智能体（角色+提示词+技能+MCP+知识库）+ 审批 |
@@ -168,6 +168,7 @@ llm-platform/
 - [x] `docker compose up -d` 一键部署全部 6 服务，前端 `:3001` + 后端 `:8000` 双端口
 - [x] 登录（真实后端 /v1/auth/login）
 - [x] Chat 页 SSE 流式逐字显示 + Markdown 渲染 + 记忆压缩可视化
+- [x] 长输出续写机制（截断自动续写拼接，代码/文档完整输出）+ 代码复制/导出
 - [x] 5+ 厂商模型路由 + 熔断 + 降级 + 限流
 - [x] BGE-M3 语义检索（1024d，自动降级 bge-small-zh/hash）
 - [x] 4 种 Agent 模式 + PEV + 7 种多 Agent 编排
