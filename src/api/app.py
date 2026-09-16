@@ -233,19 +233,35 @@ async def _init_rag_pipeline(app: FastAPI):
 
     vector_store = InMemoryVectorStore()
 
-    # Primary embedder: bge-small-zh-v1.5 (512d, ~95MB, strong for Chinese).
-    # The heavier BGE-M3 (1024d multilingual) can be enabled by switching the
-    # model key when its weights are downloadable.
+    # Embedder selection with graceful fallback:
+    #   1. bge-m3 (1024d multilingual) — strongest, used when its weights exist
+    #   2. bge-small-zh-v1.5 (512d Chinese) — strong for Chinese, ~95MB
+    #   3. hash embedder — deterministic fallback when no model is available
+    embedder = None
     try:
         import importlib.util
         if importlib.util.find_spec("sentence_transformers") is None:
             raise ImportError("sentence_transformers not installed")
-        embedder = EmbeddingRegistry().get_embedder("bge-small-zh-v1.5")
-        if getattr(embedder, "_model", None) is None:
-            raise RuntimeError("embedding model failed to load")
-        logger.info("Using bge-small-zh-v1.5 embedder (dim=%d)", embedder.dim)
-    except Exception as exc:  # noqa: BLE001 - model download may be unavailable
-        logger.warning("Embedding model unavailable (%s); using hash embedder", exc)
+
+        registry = EmbeddingRegistry()
+
+        # Try bge-m3 first (heavier, multilingual)
+        for model_key in ("bge-m3", "bge-small-zh-v1.5"):
+            try:
+                candidate = registry.get_embedder(model_key)
+                if getattr(candidate, "_model", None) is not None:
+                    embedder = candidate
+                    logger.info("Using %s embedder (dim=%d)", model_key, embedder.dim)
+                    break
+                else:
+                    logger.info("%s weights not available, trying next", model_key)
+            except Exception as exc:  # noqa: BLE001
+                logger.info("%s failed to load (%s), trying next", model_key, exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("sentence-transformers unavailable (%s)", exc)
+
+    if embedder is None:
+        logger.warning("No embedding model available; using hash embedder")
         embedder = _HashEmbedder(dim=512)
 
     # DeepSeek LLM for generation (optional — extractive fallback if no key).
