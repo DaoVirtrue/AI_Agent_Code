@@ -1,12 +1,39 @@
 import { useEffect, useRef } from 'react';
-import { Avatar, Typography, Skeleton } from 'antd';
-import { UserOutlined, RobotOutlined } from '@ant-design/icons';
+import { Avatar, Typography, Skeleton, Button, message } from 'antd';
+import { UserOutlined, RobotOutlined, CopyOutlined, DownloadOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { useChatStore } from '@/store';
 
 const { Text } = Typography;
+
+function copyText(text: string) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => message.success('已复制'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    message.success('已复制');
+  }
+}
+
+function downloadText(text: string, filename: string) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  message.success('已导出下载');
+}
 
 export function ChatMessages() {
   const activeConversationId = useChatStore((s) => s.activeConversationId);
@@ -113,6 +140,30 @@ export function ChatMessages() {
                   </div>
                 )}
               </div>
+
+              {/* Action buttons: copy + download (assistant messages only) */}
+              {!isUser && message.content && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<CopyOutlined />}
+                    onClick={() => copyText(message.content || '')}
+                    style={{ fontSize: 11, color: '#888' }}
+                  >
+                    复制
+                  </Button>
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<DownloadOutlined />}
+                    onClick={() => downloadText(message.content || '', `chat_${message.id || Date.now()}.md`)}
+                    style={{ fontSize: 11, color: '#888' }}
+                  >
+                    导出
+                  </Button>
+                </div>
+              )}
 
               {/* Timestamp */}
               {message.timestamp && (

@@ -415,7 +415,7 @@ def create_app(settings=None) -> FastAPI:
     class SimpleChatRequest(PydanticBase):
         model: str = "deepseek-chat"
         messages: list[dict] = []
-        max_tokens: int = 2048
+        max_tokens: int = 8192
         temperature: float = 0.7
         stream: bool = False
 

@@ -101,7 +101,7 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
       ];
       const response = await fetch('/api/v1/chat/completions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: requestModel, messages: apiMessages, max_tokens: 2048, stream: true }),
+        body: JSON.stringify({ model: requestModel, messages: apiMessages, max_tokens: 8192, stream: true }),
       });
       if (!response.ok) throw new Error(`API ${response.status}`);
 
