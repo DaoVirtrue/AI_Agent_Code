@@ -49,6 +49,39 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# Metrics (module-level singletons, shared across all GatewayRouter instances)
+# ---------------------------------------------------------------------------
+
+if _PROMETHEUS_AVAILABLE:
+    _REQUEST_COUNTER = Counter(
+        "ai_gateway_requests_total",
+        "Total number of gateway requests",
+        ["tenant_id", "model", "status"],
+    )
+    _REQUEST_LATENCY = Histogram(
+        "ai_gateway_request_latency_seconds",
+        "Gateway request duration in seconds",
+        ["tenant_id", "model"],
+        buckets=[0.1, 0.5, 1, 2, 5, 10, 30, 60, 120],
+    )
+    _ERROR_COUNTER = Counter(
+        "ai_gateway_errors_total",
+        "Total gateway error count",
+        ["tenant_id", "model", "error_type"],
+    )
+    _TOKEN_COUNTER = Counter(
+        "ai_gateway_tokens_total",
+        "Total tokens processed",
+        ["tenant_id", "model", "type"],
+    )
+else:
+    _REQUEST_COUNTER = None
+    _REQUEST_LATENCY = None
+    _ERROR_COUNTER = None
+    _TOKEN_COUNTER = None
+
+
+# ---------------------------------------------------------------------------
 # Data models
 # ---------------------------------------------------------------------------
 
@@ -191,34 +224,11 @@ class GatewayRouter:
         # Tenant tier mappings
         self._tenant_tiers: Dict[str, str] = {}
 
-        # Prometheus metrics
-        if _PROMETHEUS_AVAILABLE:
-            self._request_counter = Counter(
-                "ai_gateway_requests_total",
-                "Total number of gateway requests",
-                ["tenant_id", "model", "status"],
-            )
-            self._request_latency = Histogram(
-                "ai_gateway_request_latency_seconds",
-                "Gateway request duration in seconds",
-                ["tenant_id", "model"],
-                buckets=[0.1, 0.5, 1, 2, 5, 10, 30, 60, 120],
-            )
-            self._error_counter = Counter(
-                "ai_gateway_errors_total",
-                "Total gateway error count",
-                ["tenant_id", "model", "error_type"],
-            )
-            self._token_counter = Counter(
-                "ai_gateway_tokens_total",
-                "Total tokens processed",
-                ["tenant_id", "model", "type"],
-            )
-        else:
-            self._request_counter = None
-            self._request_latency = None
-            self._error_counter = None
-            self._token_counter = None
+        # Prometheus metrics (shared module-level singletons)
+        self._request_counter = _REQUEST_COUNTER
+        self._request_latency = _REQUEST_LATENCY
+        self._error_counter = _ERROR_COUNTER
+        self._token_counter = _TOKEN_COUNTER
 
     # ------------------------------------------------------------------
     # Configuration

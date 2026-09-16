@@ -1,162 +1,65 @@
-"""Integration tests for gateway routing with mocked LLM providers."""
+"""Integration tests for gateway routing (real GatewayRouter, async interface)."""
 
 import pytest
-pytestmark = pytest.mark.skip(reason='M0: 引用不存在的旧模块 (src.agent.* / src.gateway.* / src.rag.*) 或缺 fixture (test_redis/test_db_session/test_app)，待 M2/M3 真实链路接通后重写。')
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+
+from src.ai_gateway.gateway import GatewayRouter, GatewayConfig, RequestContext
+from src.ai_gateway.providers.base import LLMRequest, Message, LLMResponse, TokenUsage
+from src.ai_gateway.provider_registry import ProviderRegistry
+from src.ai_gateway.providers.deepseek_provider import DeepSeekProvider
 
 
 class TestGatewayRouting:
-    """Integration tests for the gateway routing logic."""
+    """Tests for the real GatewayRouter (async)."""
 
     @pytest.fixture
-    async def gateway_setup(self, test_redis):
-        """Set up a gateway router with mocked dependencies."""
-        from src.gateway.router import GatewayRouter
-        from src.gateway.model_registry import ModelRegistry
-        from src.gateway.circuit_breaker import CircuitBreakerRegistry
-        from src.gateway.rate_limiter import RateLimiter
+    def registry(self):
+        return ProviderRegistry()
 
-        # Create test model registry
-        registry = ModelRegistry()
-        registry.add_model(
-            id="gpt-4o",
-            provider="openai",
-            display_name="GPT-4o",
-            context_window=128000,
-            max_output_tokens=16384,
-            capabilities=["chat", "function_calling", "vision"],
-            pricing={"input": 0.0025, "output": 0.01},
+    @pytest.fixture
+    def gateway(self, registry):
+        return GatewayRouter(
+            provider_registry=registry,
+            config=GatewayConfig(enable_rate_limiting=False, enable_cache=False),
         )
-        registry.add_model(
-            id="claude-3-opus",
-            provider="anthropic",
-            display_name="Claude 3 Opus",
-            context_window=200000,
-            max_output_tokens=4096,
-            capabilities=["chat", "function_calling", "vision"],
-            pricing={"input": 0.015, "output": 0.075},
-        )
-        registry.add_model(
-            id="gpt-3.5-turbo",
-            provider="openai",
-            display_name="GPT-3.5 Turbo",
-            context_window=16385,
-            max_output_tokens=4096,
-            capabilities=["chat", "function_calling"],
-            pricing={"input": 0.0005, "output": 0.0015},
-        )
-
-        cb_registry = CircuitBreakerRegistry()
-        rate_limiter = RateLimiter(redis=test_redis)
-
-        gateway = GatewayRouter(
-            model_registry=registry,
-            circuit_breaker_registry=cb_registry,
-            rate_limiter=rate_limiter,
-            redis=test_redis,
-        )
-
-        # Mock the provider adapter
-        mock_adapter = AsyncMock()
-        mock_adapter.complete = AsyncMock(return_value={
-            "content": "Mocked LLM response",
-            "finish_reason": "stop",
-            "provider": "openai",
-            "output_tokens": 50,
-            "cost_usd": 0.001,
-            "cached_tokens": 0,
-            "tool_calls": None,
-        })
-        mock_adapter.stream_complete = AsyncMock(return_value=AsyncMock())
-        mock_adapter.health_check = AsyncMock(return_value=True)
-        gateway._adapters = {"openai": mock_adapter, "anthropic": mock_adapter}
-
-        return gateway
 
     @pytest.mark.asyncio
-    async def test_route_basic_completion(self, gateway_setup):
-        """Test basic chat completion routing."""
-        result = await gateway_setup.route(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": "Hello"}],
-            temperature=0.7,
-            max_tokens=100,
-            tenant_id="test-tenant",
+    async def test_route_basic_completion(self, gateway):
+        """Route a basic completion with a mocked provider chat."""
+        provider = DeepSeekProvider(api_key="test-key")
+        await gateway._registry.register("deepseek", provider)
+        gateway.register_api_key("test-key", "test-tenant")
+
+        # Mock the provider's chat method
+        gateway._registry._providers["deepseek"].chat = AsyncMock(return_value=LLMResponse(
+            model="deepseek-chat", content="hi", finish_reason="stop",
+            usage=TokenUsage(input_tokens=5, output_tokens=2),
+        ))
+
+        request = LLMRequest(
+            model="deepseek-chat",
+            messages=[Message(role="user", content="Hello")],
         )
-        assert "content" in result
-        assert result.get("provider", "")
+        context = RequestContext(tenant_id="test-tenant", api_key="test-key")
+
+        response = await gateway.route(request, context)
+        assert response.content == "hi"
+        assert response.model == "deepseek-chat"
 
     @pytest.mark.asyncio
-    async def test_route_to_specific_provider(self, gateway_setup):
-        """Test routing to a specific provider's model."""
-        result = await gateway_setup.route(
-            model="claude-3-opus",
-            messages=[{"role": "user", "content": "Test"}],
-            tenant_id="test-tenant",
-        )
-        assert result.get("provider") == "openai"  # Mock adapter is shared
+    async def test_auth_required(self, gateway):
+        """Missing API key -> AuthenticationError."""
+        from src.ai_gateway.gateway import AuthenticationError
+
+        request = LLMRequest(model="deepseek-chat", messages=[Message(role="user", content="hi")])
+        context = RequestContext(tenant_id="t1", api_key="")
+
+        with pytest.raises(AuthenticationError):
+            await gateway.route(request, context)
 
     @pytest.mark.asyncio
-    async def test_list_models(self, gateway_setup):
-        """Test listing available models."""
-        models = await gateway_setup.list_models(tenant_id="test-tenant")
-        assert len(models) == 3
-        model_ids = [m.id for m in models]
-        assert "gpt-4o" in model_ids
-        assert "claude-3-opus" in model_ids
-        assert "gpt-3.5-turbo" in model_ids
-
-    @pytest.mark.asyncio
-    async def test_health_check(self, gateway_setup):
-        """Test gateway health check endpoint."""
-        health = await gateway_setup.health_check()
-        assert "status" in health
-        assert "providers" in health or health["status"] == "healthy"
-
-    @pytest.mark.asyncio
-    async def test_route_with_tools(self, gateway_setup):
-        """Test routing a request with tool definitions."""
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "description": "Get current weather",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "location": {"type": "string"},
-                        },
-                    },
-                },
-            }
-        ]
-
-        result = await gateway_setup.route(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": "What's the weather?"}],
-            tools=tools,
-            tenant_id="test-tenant",
-        )
-        assert "content" in result
-
-    @pytest.mark.asyncio
-    async def test_route_invalid_model(self, gateway_setup):
-        """Test routing to an invalid model raises an error."""
-        with pytest.raises(ValueError, match="not found"):
-            await gateway_setup.route(
-                model="nonexistent-model",
-                messages=[{"role": "user", "content": "Test"}],
-                tenant_id="test-tenant",
-            )
-
-    @pytest.mark.asyncio
-    async def test_model_routing_preference(self, gateway_setup):
-        """Test that gateway respects model preferences."""
-        # GPT-3.5-turbo should be routed to openai
-        result = await gateway_setup.route(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "Test"}],
-            tenant_id="test-tenant",
-        )
-        assert result.get("provider") == "openai"
+    async def test_health_report(self, gateway):
+        """Health report returns gateway/providers keys."""
+        report = await gateway.health_report()
+        assert "gateway" in report
+        assert "providers" in report
