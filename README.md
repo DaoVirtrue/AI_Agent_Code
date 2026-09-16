@@ -79,12 +79,12 @@ docker compose up -d           # 一键启动全部 6 个服务
 |------|------|------|
 | **登录** | `/login` | 粒子动画登录（真实后端 /v1/auth/login） |
 | **Dashboard** | `/dashboard` | 统计卡片 + Token 趋势 + 模型分布（真实 admin 端点） |
-| **Chat** | `/chat` | 三栏对话 + 专家选择 + 记忆压缩 + 长输出续写 + 代码复制/导出 |
+| **AI 工作台** | `/chat` | 对话 + 专家/技能/RAG 选择 + 文件/图片上传解析 + 记忆压缩 + 长输出续写 + 复制/导出 |
 | **RAG** | `/rag` | 文档上传 + 语义检索 + 知识库管理 |
 | **Agent** | `/agent` | Agent 执行日志逐步展开（真实 /v1/agent/run） |
 | **智能体专家** | `/experts` | 创建专属智能体（角色+提示词+技能+MCP+知识库）+ 审批 |
+| **技能仓库** | `/skills` | 技能上传/列表/搜索/删除 + 权限管理（工具授权规则） |
 | **质量评测** | `/eval` | RAGAS 五指标雷达图 + 历史趋势 |
-| **文档工具** | `/docs` | 文档生成下载（md/docx/xlsx/pptx）+ OCR 图片识别 |
 | **Prompts** | `/prompts` | Prompt 模板 + 变量测试 |
 | **Gateway** | `/gateway` | Provider 健康 + 熔断状态 |
 | **MCP** | `/mcp` | MCP Server 管理 + 工具目录 |
@@ -173,7 +173,10 @@ llm-platform/
 - [x] BGE-M3 语义检索（1024d，自动降级 bge-small-zh/hash）
 - [x] 4 种 Agent 模式 + PEV + 7 种多 Agent 编排
 - [x] 业务专家（角色+提示词+技能+MCP+专属知识库）
+- [x] Skill 仓库（技能上传/拉取/安装）
+- [x] 权限管理（工具授权规则配置）
 - [x] MCP 工具化（CLI/文档/OCR）+ 每次授权机制
+- [x] AI 工作台文件/图片上传解析 + RAG/技能选择
 - [x] RAGAS 评测（五指标 + 历史趋势）
 - [x] 文档生成下载（md/docx/xlsx/pptx）
 - [x] 五层记忆 + Ebbinghaus 遗忘曲线 + 上下文压缩不丢关键信息
