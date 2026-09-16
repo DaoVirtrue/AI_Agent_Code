@@ -171,6 +171,53 @@ async def _init_agent_executor(app: FastAPI):
     app.state.agent_executor = AgentExecutor(tool_registry=tool_registry)
 
 
+async def _init_mcp_tools(app: FastAPI):
+    """Initialize MCP server with built-in tools (CLI / document / OCR) and
+    the approval gate + business-expert registry."""
+    from src.mcp.server.server import MCPServer
+    from src.mcp.approval import ApprovalGate
+    from src.mcp.tools import CLITool, DocumentTool, OCRTool
+    from src.agents.expert_registry import ExpertRegistry
+    from src.services.document_generator import DocumentGenerator
+    from src.services.ocr_service import OCRService
+
+    # Approval gate (每次授权)
+    approval_gate = ApprovalGate(timeout_seconds=300)
+    app.state.approval_gate = approval_gate
+
+    # Built-in MCP tools (reuse services initialized earlier)
+    document_generator = getattr(app.state, "document_generator", None) or DocumentGenerator(llm=getattr(app.state, "llm", None))
+    ocr_service = getattr(app.state, "ocr_service", None) or OCRService(vision_llm=None)
+    cli_tool = CLITool()
+    doc_tool = DocumentTool(generator=document_generator)
+    ocr_tool = OCRTool(ocr_service=ocr_service)
+
+    mcp_server = MCPServer(name="llm-platform", version="1.0.0")
+    for tool in (cli_tool, doc_tool, ocr_tool):
+        mcp_server.register_tool(tool)
+
+    # Approval hook: CLI tool requires approval (already requires_approval=True,
+    # enforced in the expert/tool execution path via approval_gate)
+    app.state.mcp_server = mcp_server
+    app.state.approval_gate = approval_gate
+
+    # Business expert registry (roles + prompt + skills + MCP tools)
+    tools_by_name = {
+        tool.definition.name: tool
+        for tool in (cli_tool, doc_tool, ocr_tool)
+    }
+    # Also expose the agent tool registry tools
+    for tool in app.state.tool_registry.list_all():
+        tools_by_name[tool.name] = app.state.tool_registry.get_tool(tool.name)
+
+    app.state.expert_registry = ExpertRegistry(
+        llm=getattr(app.state, "llm", None),
+        tools=tools_by_name,
+        approval_gate=approval_gate,
+    )
+    logger.info("MCP tools initialized: %s", list(tools_by_name.keys()))
+
+
 async def _init_rag_pipeline(app: FastAPI):
     """Initialize a real RAG pipeline backed by a vector store + LLM.
 
@@ -251,6 +298,7 @@ async def lifespan(app: FastAPI):
     await _try_init("agent_executor", _init_agent_executor(app))
     await _try_init("rag_pipeline", _init_rag_pipeline(app))
     await _try_init("document_generator", _init_document_generator(app))
+    await _try_init("mcp_tools", _init_mcp_tools(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield
@@ -329,6 +377,12 @@ def create_app(settings=None) -> FastAPI:
         app.include_router(document_router)
     except Exception as e:
         logger.warning("Document routes not loaded: %s", e)
+
+    try:
+        from src.api.routes.expert_routes import router as expert_router
+        app.include_router(expert_router)
+    except Exception as e:
+        logger.warning("Expert routes not loaded: %s", e)
 
     if settings:
         app.state.settings = settings

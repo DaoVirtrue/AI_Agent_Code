@@ -43,12 +43,15 @@ from src.agents.communication.heartbeat import HeartbeatMonitor
 from src.agents.communication.deadlock import DeadlockDetector
 from src.agents.safety import SafetyGuard
 from src.agents.pev import PEVAgent, PEVResult, PEVState, PEVStep
+from src.agents.expert import BusinessExpert, ExpertConfig, ExpertResult
+from src.agents.expert_registry import ExpertRegistry
 
 __all__ = [
     "BaseTool", "ToolDefinition", "ToolResult", "ToolStatus",
     "ToolRegistry", "ExecutionSandbox", "ToolSecurityManager",
     "ReActAgent", "PlanExecuteAgent", "ReWOOAgent", "ReflectionAgent",
     "PEVAgent", "PEVResult", "PEVState", "PEVStep",
+    "BusinessExpert", "ExpertConfig", "ExpertResult", "ExpertRegistry",
     "ShortTermMemory", "LongTermMemory", "EpisodicMemory", "Episode",
     "MemoryManager", "MemoryConsolidationEngine", "ForgettingCurve",
     "SharedBlackboard",
