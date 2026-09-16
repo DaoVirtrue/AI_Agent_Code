@@ -171,6 +171,14 @@ async def _init_agent_executor(app: FastAPI):
     app.state.agent_executor = AgentExecutor(tool_registry=tool_registry)
 
 
+async def _init_skill_store(app: FastAPI):
+    """Initialize the skill repository."""
+    from src.services.skill_store import SkillStore
+
+    app.state.skill_store = SkillStore()
+    logger.info("Skill store initialized")
+
+
 async def _init_mcp_tools(app: FastAPI):
     """Initialize MCP server with built-in tools (CLI / document / OCR) and
     the approval gate + business-expert registry."""
@@ -316,6 +324,7 @@ async def lifespan(app: FastAPI):
     await _try_init("rag_pipeline", _init_rag_pipeline(app))
     await _try_init("document_generator", _init_document_generator(app))
     await _try_init("mcp_tools", _init_mcp_tools(app))
+    await _try_init("skill_store", _init_skill_store(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield
@@ -406,6 +415,12 @@ def create_app(settings=None) -> FastAPI:
         app.include_router(auth_router)
     except Exception as e:
         logger.warning("Auth routes not loaded: %s", e)
+
+    try:
+        from src.api.routes.skill_routes import router as skill_router
+        app.include_router(skill_router)
+    except Exception as e:
+        logger.warning("Skill routes not loaded: %s", e)
 
     if settings:
         app.state.settings = settings

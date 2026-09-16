@@ -23,6 +23,7 @@ const GatewayPage = lazy(() => import('@/pages/GatewayPage').then(m => ({ defaul
 const MCPPage = lazy(() => import('@/pages/MCPPage').then(m => ({ default: m.MCPPage })));
 const EvalPage = lazy(() => import('@/pages/EvalPage').then(m => ({ default: m.EvalPage })));
 const ExpertPage = lazy(() => import('@/pages/ExpertPage').then(m => ({ default: m.ExpertPage })));
+const SkillPage = lazy(() => import('@/pages/SkillPage').then(m => ({ default: m.SkillPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/mcp" element={<SuspenseWrapper><MCPPage /></SuspenseWrapper>} />
           <Route path="/eval" element={<SuspenseWrapper><EvalPage /></SuspenseWrapper>} />
           <Route path="/experts" element={<SuspenseWrapper><ExpertPage /></SuspenseWrapper>} />
+          <Route path="/skills" element={<SuspenseWrapper><SkillPage /></SuspenseWrapper>} />
           <Route path="/admin/*" element={
             <RouteGuard requiredRole="admin">
               <SuspenseWrapper><AdminPage /></SuspenseWrapper>

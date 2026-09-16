@@ -37,6 +37,7 @@ const menuItems: MenuItem[] = [
   getItem('RAG 知识库', '/rag', <DatabaseOutlined />),
   getItem('Agent 控制台', '/agent', <RobotOutlined />),
   getItem('智能体专家', '/experts', <UserOutlined />),
+  getItem('技能仓库', '/skills', <ApiOutlined />),
   getItem('Prompt 工程', '/prompts', <FileTextOutlined />),
   getItem('网关监控', '/gateway', <ApiOutlined />),
   getItem('MCP 管理', '/mcp', <LinkOutlined />),
