@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Input, Button, Typography, Space, Tag, Table, Empty, message, Modal, Select } from 'antd';
-import { ApiOutlined, PlusOutlined, SearchOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Typography, Space, Tag, Table, Empty, message, Modal, Select, Switch } from 'antd';
+import { ApiOutlined, PlusOutlined, SearchOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useAppStore } from '@/store';
 import { listSkills, createSkill, deleteSkill, type Skill } from '@/api/skills';
 import { listAvailableTools as listTools } from '@/api/experts';
+import { listPermissions, setPermission, type PermissionRule } from '@/api/permissions';
 
 const { TextArea } = Input;
 const { Title, Text, Paragraph } = Typography;
@@ -12,6 +13,7 @@ export function SkillPage() {
   const setBreadcrumbs = useAppStore((s) => s.setBreadcrumbs);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [tools, setTools] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<PermissionRule[]>([]);
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -23,11 +25,22 @@ export function SkillPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [skillRes, toolRes] = await Promise.all([listSkills(search), listTools()]);
+      const [skillRes, toolRes, permRes] = await Promise.all([listSkills(search), listTools(), listPermissions()]);
       setSkills(skillRes.items || []);
       setTools(toolRes.tools || []);
+      setPermissions(permRes.items || []);
     } catch {}
   }, [search]);
+
+  const handleTogglePermission = async (toolName: string, requiresApproval: boolean) => {
+    try {
+      await setPermission(toolName, requiresApproval);
+      message.success(`「${toolLabel(toolName)}」${requiresApproval ? '设为需授权' : '设为免授权'}`);
+      refresh();
+    } catch (err: any) {
+      message.error('设置失败: ' + (err?.message || '未知错误'));
+    }
+  };
 
   useEffect(() => {
     setBreadcrumbs([{ title: '技能仓库' }]);
@@ -93,6 +106,37 @@ export function SkillPage() {
       >
         <Table dataSource={skills} rowKey="name" columns={columns} pagination={false}
           locale={{ emptyText: <Empty description="暂无技能，点击「上传技能」创建你的可复用技能" /> }} />
+      </Card>
+
+      <Card title={<span className="flex items-center gap-2"><SafetyOutlined /> 权限管理（工具授权规则）</span>}>
+        <div className="space-y-2">
+          {tools.length === 0 ? (
+            <Empty description="暂无工具" />
+          ) : (
+            tools.map((t) => {
+              const rule = permissions.find(p => p.tool_name === t.name);
+              const requiresApproval = rule ? rule.requires_approval : t.requires_approval;
+              return (
+                <div key={t.name} className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div>
+                    <Text strong>{t.label || t.name}</Text>
+                    <Text type="secondary" className="ml-2 text-xs">{t.name}</Text>
+                    {requiresApproval && <Tag color="orange" className="ml-2">每次授权</Tag>}
+                  </div>
+                  <Switch
+                    checked={requiresApproval}
+                    onChange={(checked) => handleTogglePermission(t.name, checked)}
+                    checkedChildren="需授权"
+                    unCheckedChildren="免授权"
+                  />
+                </div>
+              );
+            })
+          )}
+        </div>
+        <Text type="secondary" className="block mt-3 text-xs">
+          需授权的工具在执行前会要求用户明确同意（每次授权，不支持永久信任）；免授权工具直接执行。
+        </Text>
       </Card>
 
       <Modal title="上传技能" open={createOpen} onOk={handleCreate} onCancel={() => setCreateOpen(false)} width={600} okText="创建" cancelText="取消">

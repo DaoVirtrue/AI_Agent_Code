@@ -179,6 +179,14 @@ async def _init_skill_store(app: FastAPI):
     logger.info("Skill store initialized")
 
 
+async def _init_permission_store(app: FastAPI):
+    """Initialize the permission rule store."""
+    from src.services.permission_store import PermissionStore
+
+    app.state.permission_store = PermissionStore()
+    logger.info("Permission store initialized")
+
+
 async def _init_mcp_tools(app: FastAPI):
     """Initialize MCP server with built-in tools (CLI / document / OCR) and
     the approval gate + business-expert registry."""
@@ -325,6 +333,7 @@ async def lifespan(app: FastAPI):
     await _try_init("document_generator", _init_document_generator(app))
     await _try_init("mcp_tools", _init_mcp_tools(app))
     await _try_init("skill_store", _init_skill_store(app))
+    await _try_init("permission_store", _init_permission_store(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield
@@ -421,6 +430,12 @@ def create_app(settings=None) -> FastAPI:
         app.include_router(skill_router)
     except Exception as e:
         logger.warning("Skill routes not loaded: %s", e)
+
+    try:
+        from src.api.routes.permission_routes import router as permission_router
+        app.include_router(permission_router)
+    except Exception as e:
+        logger.warning("Permission routes not loaded: %s", e)
 
     if settings:
         app.state.settings = settings
