@@ -99,48 +99,75 @@ export const useChatStore = create<ChatState>()(persist((set, get) => ({
         { role: 'system', content: '你是AI助手。对于复杂问题请用格式：\n## 思考\n(推理)\n## 回答\n(结论)\n简单问题直接答。' + ragContext },
         ...updatedMessages.filter(m => m.content && m.content.trim()).map(m => ({ role: m.role, content: m.content })),
       ];
-      const response = await fetch('/api/v1/chat/completions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: requestModel, messages: apiMessages, max_tokens: 8192, stream: true }),
-      });
-      if (!response.ok) throw new Error(`API ${response.status}`);
+      // 单次流式调用：返回完整文本 + finish_reason（用于检测是否被截断）
+      const streamOnce = async (msgs: any[]): Promise<{ text: string; finishReason: string }> => {
+        const response = await fetch('/api/v1/chat/completions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: requestModel, messages: msgs, max_tokens: 8192, stream: true }),
+        });
+        if (!response.ok) throw new Error(`API ${response.status}`);
 
-      // SSE streaming: read chunks and update assistant message content incrementally
-      const reader = response.body?.getReader();
-      let reply = '';
-      let usage: any = {};
-      if (reader) {
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith('data: ')) continue;
-            const dataStr = trimmed.slice(6);
-            if (dataStr === '[DONE]') continue;
-            try {
-              const chunk = JSON.parse(dataStr);
-              const delta = chunk.choices?.[0]?.delta?.content || '';
-              reply += delta;
-              if (chunk.usage) usage = chunk.usage;
-              // Update UI with streaming content
-              set(s => ({
-                conversations: s.conversations.map(c => {
-                  if (c.id !== convId) return c;
-                  const msgs = [...c.messages]; const last = msgs[msgs.length - 1];
-                  if (last?.role === 'assistant') last.content = reply;
-                  return { ...c, messages: msgs, updatedAt: new Date().toISOString() };
-                }),
-              }));
-            } catch {}
+        const reader = response.body?.getReader();
+        let text = '';
+        let finishReason = '';
+        if (reader) {
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith('data: ')) continue;
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const chunk = JSON.parse(dataStr);
+                const delta = chunk.choices?.[0]?.delta?.content || '';
+                const fr = chunk.choices?.[0]?.finish_reason || '';
+                text += delta;
+                if (fr) finishReason = fr;
+                if (chunk.usage) usage = chunk.usage;
+                // Update UI with streaming content (append)
+                set(s => ({
+                  conversations: s.conversations.map(c => {
+                    if (c.id !== convId) return c;
+                    const msgs = [...c.messages]; const last = msgs[msgs.length - 1];
+                    if (last?.role === 'assistant') last.content = reply + text;
+                    return { ...c, messages: msgs, updatedAt: new Date().toISOString() };
+                  }),
+                }));
+              } catch {}
+            }
           }
         }
+        return { text, finishReason };
+      };
+
+      // 续写循环：如果被截断(finish_reason=length)，带上"继续"指令续写，最多 5 轮
+      let reply = '';
+      let usage: any = {};
+      let currentMessages = apiMessages;
+      const MAX_CONTINUATIONS = 5;
+      for (let round = 0; round <= MAX_CONTINUATIONS; round++) {
+        const { text, finishReason } = await streamOnce(currentMessages);
+        reply += text;
+
+        if (finishReason !== 'length' || round >= MAX_CONTINUATIONS) {
+          break; // 完整结束或达到续写上限
+        }
+
+        // 被截断：追加已生成内容 + 续写指令，继续
+        currentMessages = [
+          ...currentMessages,
+          { role: 'assistant', content: text },
+          { role: 'user', content: '【继续】请从上一段中断的地方继续完整输出，不要重复已输出的内容。' },
+        ];
       }
+
       if (!reply) reply = '(无回复)';
 
       // Sync assistant reply to backend conversation memory.
