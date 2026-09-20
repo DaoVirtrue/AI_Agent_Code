@@ -204,6 +204,13 @@ async def _init_seed_examples(app: FastAPI):
     await seed_examples(app)
 
 
+async def _init_langsmith(app: FastAPI):
+    """Configure LangSmith tracing (opt-in; no-op without LANGSMITH_API_KEY)."""
+    from src.observability.langsmith_trace import setup_langsmith
+
+    app.state.langsmith_status = setup_langsmith()
+
+
 async def _init_mcp_tools(app: FastAPI):
     """Initialize MCP server with built-in tools (CLI / document / OCR) and
     the approval gate + business-expert registry."""
@@ -366,6 +373,7 @@ async def lifespan(app: FastAPI):
     await _try_init("skill_store", _init_skill_store(app))
     await _try_init("permission_store", _init_permission_store(app))
     await _try_init("seed_examples", _init_seed_examples(app))
+    await _try_init("langsmith", _init_langsmith(app))
 
     logger.info("LLM Platform started (some services may be deferred)")
     yield

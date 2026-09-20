@@ -104,6 +104,10 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - QWEN_API_KEY=${QWEN_API_KEY:-}
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-llm-platform}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - HF_HOME=/app/cache/huggingface

@@ -11,6 +11,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
+from src.observability.langsmith_trace import traceable_llm
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,6 +53,7 @@ class DeepSeekLLM:
             logger.error("openai package not installed; DeepSeekLLM unavailable")
             self._client = None
 
+    @traceable_llm
     async def ainvoke(self, messages: list[dict]) -> Any:
         """Call the DeepSeek chat completions API.
 
